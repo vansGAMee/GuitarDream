@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useSong } from '../../state/songContext';
 import { IconClose, IconDownload } from '../Common/Icons';
 import { downloadAsciiTab } from '../../export/asciiTab';
@@ -46,12 +46,12 @@ export const ExportSheet: React.FC<ExportSheetProps> = ({ isOpen, onClose }) => 
         <div className="flex items-center justify-between px-6 py-4 border-b border-strong-divider shrink-0">
           <div className="flex items-center gap-2">
             <IconDownload className="w-5 h-5 text-primary" />
-            <h2 className="text-title-lg font-bold text-on-surface">Export Tablature</h2>
+            <h2 className="text-title-lg font-bold text-on-surface">Экспорт партитуры и табов</h2>
           </div>
           <button
             onClick={onClose}
             className="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary hover:text-on-surface hover:bg-surface-variant transition-colors"
-            aria-label="Close"
+            aria-label="Закрыть"
           >
             <IconClose />
           </button>
@@ -59,33 +59,22 @@ export const ExportSheet: React.FC<ExportSheetProps> = ({ isOpen, onClose }) => 
 
         {/* Formats */}
         <div className="p-6 space-y-3 overflow-y-auto">
-          {/* ASCII TAB */}
+          {/* PDF Sheet Music */}
           <button
-            onClick={() => handleExport('ascii')}
+            onClick={() => handleExport('pdf')}
             disabled={exportingType !== null}
-            className="w-full flex items-center justify-between p-4 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-left transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-surface-2 hover:bg-surface-3 border border-primary/40 hover:border-primary rounded-xl text-left transition-all shadow-md group"
           >
             <div>
-              <div className="font-semibold text-body-standard text-on-surface">ASCII Tab (.txt)</div>
-              <div className="text-metadata-sm text-text-tertiary">Plaintext 6-string tablature format</div>
+              <div className="font-semibold text-body-standard text-primary group-hover:text-accent-light flex items-center gap-1.5">
+                <span>Партитура в нотах + Табы (.pdf)</span>
+              </div>
+              <div className="text-metadata-sm text-text-secondary mt-0.5">
+                Классический нотный стан (скрипичный ключ 8vb, штили, длительности, диезы) + табы
+              </div>
             </div>
-            <span className="text-primary text-metadata-sm font-semibold">
-              {exportingType === 'ascii' ? 'Exporting...' : 'Export'}
-            </span>
-          </button>
-
-          {/* MIDI */}
-          <button
-            onClick={() => handleExport('midi')}
-            disabled={exportingType !== null}
-            className="w-full flex items-center justify-between p-4 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-left transition-colors"
-          >
-            <div>
-              <div className="font-semibold text-body-standard text-on-surface">Standard MIDI (.mid)</div>
-              <div className="text-metadata-sm text-text-tertiary">Multi-pitch chords with accurate durations &amp; tempo</div>
-            </div>
-            <span className="text-primary text-metadata-sm font-semibold">
-              {exportingType === 'midi' ? 'Exporting...' : 'Export'}
+            <span className="text-primary text-metadata-sm font-bold shrink-0 ml-3">
+              {exportingType === 'pdf' ? 'Экспорт...' : 'PDF'}
             </span>
           </button>
 
@@ -97,25 +86,44 @@ export const ExportSheet: React.FC<ExportSheetProps> = ({ isOpen, onClose }) => 
           >
             <div>
               <div className="font-semibold text-body-standard text-on-surface">MusicXML (.musicxml)</div>
-              <div className="text-metadata-sm text-text-tertiary">Standard tablature notation for score editors</div>
+              <div className="text-metadata-sm text-text-tertiary">
+                Нотный формат для MuseScore, Guitar Pro, Sibelius, Finale
+              </div>
             </div>
-            <span className="text-primary text-metadata-sm font-semibold">
-              {exportingType === 'xml' ? 'Exporting...' : 'Export'}
+            <span className="text-primary text-metadata-sm font-semibold shrink-0 ml-3">
+              {exportingType === 'xml' ? 'Экспорт...' : 'XML'}
             </span>
           </button>
 
-          {/* PDF */}
+          {/* MIDI */}
           <button
-            onClick={() => handleExport('pdf')}
+            onClick={() => handleExport('midi')}
             disabled={exportingType !== null}
             className="w-full flex items-center justify-between p-4 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-left transition-colors"
           >
             <div>
-              <div className="font-semibold text-body-standard text-on-surface">Printable PDF (.pdf)</div>
-              <div className="text-metadata-sm text-text-tertiary">Formatted clean tablature sheet document</div>
+              <div className="font-semibold text-body-standard text-on-surface">Standard MIDI (.mid)</div>
+              <div className="text-metadata-sm text-text-tertiary">
+                Полифонический MIDI-файл для DAW и синтезаторов
+              </div>
             </div>
-            <span className="text-primary text-metadata-sm font-semibold">
-              {exportingType === 'pdf' ? 'Exporting...' : 'Export'}
+            <span className="text-primary text-metadata-sm font-semibold shrink-0 ml-3">
+              {exportingType === 'midi' ? 'Экспорт...' : 'MIDI'}
+            </span>
+          </button>
+
+          {/* ASCII TAB */}
+          <button
+            onClick={() => handleExport('ascii')}
+            disabled={exportingType !== null}
+            className="w-full flex items-center justify-between p-4 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-left transition-colors"
+          >
+            <div>
+              <div className="font-semibold text-body-standard text-on-surface">Текстовые табы (.txt)</div>
+              <div className="text-metadata-sm text-text-tertiary">ASCII-табулатура для чтения в блокноте</div>
+            </div>
+            <span className="text-primary text-metadata-sm font-semibold shrink-0 ml-3">
+              {exportingType === 'ascii' ? 'Экспорт...' : 'TXT'}
             </span>
           </button>
         </div>

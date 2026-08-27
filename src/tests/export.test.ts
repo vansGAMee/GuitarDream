@@ -66,9 +66,12 @@ describe('Exports (ASCII, MIDI, MusicXML)', () => {
     expect(hasMTrk).toBe(true);
   });
 
-  it('generates valid MusicXML containing score-partwise, clef TAB and note technicals', () => {
+  it('generates valid MusicXML containing score-partwise, 2 staves, clef G (8vb) and linked TAB', () => {
     const xml = generateMusicXml(testSong);
     expect(xml).toContain('<score-partwise');
+    expect(xml).toContain('<staves>2</staves>');
+    expect(xml).toContain('<sign>G</sign>');
+    expect(xml).toContain('<clef-octave-change>-1</clef-octave-change>');
     expect(xml).toContain('<sign>TAB</sign>');
     expect(xml).toContain('<fret>0</fret>');
     expect(xml).toContain('<fret>2</fret>');
