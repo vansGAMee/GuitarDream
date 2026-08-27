@@ -29,9 +29,19 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --nav-base-h: 64px;
+  --header-h: 56px;
+  --nav-base-h: 60px;
   --nav-h: calc(var(--nav-base-h) + var(--safe-bottom));
-  --tab-panel-h: clamp(236px, 36dvh, 300px);
+  --tab-panel-h: clamp(190px, 34dvh, 280px);
+}
+
+/* Landscape / compact screen adaptation */
+@media (max-height: 520px) {
+  :root {
+    --header-h: 44px;
+    --nav-base-h: 48px;
+    --tab-panel-h: 150px;
+  }
 }
 
 html {
@@ -41,25 +51,29 @@ html {
   background-color: #050505;
   color: #e3e2e7;
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  touch-action: pan-x pan-y;
 }
 
 body {
   width: 100%;
-  height: 100vh !important;
+  height: 100vh;
   min-height: 0 !important;
   max-height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #050505;
   color: #e3e2e7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @supports (height: 100dvh) {
   body {
-    height: 100dvh !important;
+    height: 100dvh;
     max-height: 100dvh;
   }
 }
@@ -99,18 +113,13 @@ body {
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 }
 
-.string-wire {
-  background: linear-gradient(180deg, #666 0%, #999 50%, #555 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
 .fret-marker {
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: rgba(220, 220, 220, 0.12);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -119,11 +128,6 @@ body {
 }
 .fret-marker.double-a { top: 34%; }
 .fret-marker.double-b { top: 66%; }
-
-.inlay-dot {
-  background: radial-gradient(circle at 30% 30%, #e0e0e0, #888);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
-}
 
 .nut {
   position: absolute;
@@ -140,24 +144,6 @@ body {
 .note-marker {
   background: #c9a24a;
   box-shadow: 0 0 10px rgba(201, 162, 74, 0.4);
-}
-
-.selected-note {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #c9a24a;
-  color: #1a1408;
-  display: grid;
-  place-items: center;
-  font: 700 12px/1 'Inter', sans-serif;
-  z-index: 40;
-  pointer-events: none;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.35);
 }
 
 /* Hardware button tactile feel */
@@ -199,8 +185,8 @@ body {
 /* Six-row grid for precise string alignment */
 .six-row-grid {
   position: absolute;
-  top: 14px;
-  bottom: 14px;
+  top: 10px;
+  bottom: 10px;
   left: 0;
   right: 0;
   display: grid;
@@ -246,29 +232,7 @@ body {
   font-family: 'Courier New', monospace;
   font-weight: 600;
 }
-.tab-number.active {
-  color: #0B0B0D;
-}
-.tab-number.active::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 24px;
-  background: #ebc165;
-  border-radius: 50%;
-  z-index: -1;
-}
 
-/* Smooth GPU acceleration */
-* {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .playing-note {
     animation: none !important;

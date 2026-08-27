@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { SongProvider, useSong } from './state/songContext';
 import { PlaybackProvider } from './state/playbackContext';
 import { Header } from './components/Shell/Header';
@@ -31,9 +31,16 @@ const MainLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-canvas text-on-surface antialiased select-none">
+    <div
+      className="flex flex-col h-screen h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-canvas text-on-surface antialiased select-none"
+      style={{
+        paddingTop: 'var(--safe-top)',
+        paddingLeft: 'var(--safe-left)',
+        paddingRight: 'var(--safe-right)',
+      }}
+    >
       <Header />
-      <main className="flex-1 relative overflow-hidden flex flex-col pb-16">
+      <main className="flex-1 relative overflow-hidden flex flex-col min-h-0">
         {activeMode === 'TAB' ? <TabMode /> : <PlayMode />}
       </main>
       <BottomNav />
