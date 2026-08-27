@@ -9,8 +9,9 @@ let fxNode: GuitarFxNode | null = null;
 
 // Soundfont sample buffer cache: MIDI number -> AudioBuffer
 const sampleBufferCache = new Map<number, AudioBuffer>();
-let isSoundfontLoading = false;
+const pendingDecodes = new Set<number>();
 let soundfontRawData: Record<string, string> | null = null;
+let isSoundfontFetching = false;
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -20,7 +21,6 @@ function midiToSoundfontName(midi: number): string {
   return NOTE_NAMES[noteIndex] + octave;
 }
 
-// Convert base64 data URI to ArrayBuffer
 function base64ToArrayBuffer(base64Uri: string): ArrayBuffer {
   const base64 = base64Uri.replace(/^data:audio\/[^;]+;base64,/, '');
   const binaryString = atob(base64);
@@ -53,56 +53,58 @@ export function getAudioContext(): AudioContext {
     compressor.connect(masterGain);
     masterGain.connect(audioCtx.destination);
 
-    // Preload soundfont in background
-    loadGuitarSoundfont();
+    // Non-blocking background soundfont prefetch
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => fetchSoundfontData());
+    } else {
+      setTimeout(() => fetchSoundfontData(), 1000);
+    }
   }
 
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+    audioCtx.resume().catch(() => {});
   }
 
   return audioCtx;
 }
 
-export async function loadGuitarSoundfont(): Promise<void> {
-  if (isSoundfontLoading || soundfontRawData) return;
-  isSoundfontLoading = true;
+async function fetchSoundfontData(): Promise<void> {
+  if (isSoundfontFetching || soundfontRawData) return;
+  isSoundfontFetching = true;
 
   try {
     const res = await fetch('/soundfonts/acoustic_guitar_steel.json');
     if (!res.ok) throw new Error('Soundfont fetch failed');
     soundfontRawData = await res.json();
-
-    // Pre-decode essential guitar range (MIDI 40 to 88)
-    if (soundfontRawData && audioCtx) {
-      for (let midi = 40; midi <= 88; midi++) {
-        decodeMidiNote(midi).catch(() => {});
-      }
-    }
-  } catch (err) {
-    console.warn('Could not load acoustic soundfont, using physical synth fallback:', err);
+  } catch {
+    // Fallback stays active
   } finally {
-    isSoundfontLoading = false;
+    isSoundfontFetching = false;
   }
 }
 
-async function decodeMidiNote(midi: number): Promise<AudioBuffer | null> {
+async function decodeNoteOnDemand(midi: number): Promise<AudioBuffer | null> {
   if (sampleBufferCache.has(midi)) {
     return sampleBufferCache.get(midi)!;
   }
-  if (!soundfontRawData || !audioCtx) return null;
+  if (!soundfontRawData || !audioCtx || pendingDecodes.has(midi)) return null;
 
+  pendingDecodes.add(midi);
   const noteName = midiToSoundfontName(midi);
   const base64 = soundfontRawData[noteName];
-  if (!base64) return null;
+  if (!base64) {
+    pendingDecodes.delete(midi);
+    return null;
+  }
 
   try {
     const arrayBuffer = base64ToArrayBuffer(base64);
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     sampleBufferCache.set(midi, audioBuffer);
+    pendingDecodes.delete(midi);
     return audioBuffer;
-  } catch (err) {
-    console.warn('Failed to decode note sample:', noteName, err);
+  } catch {
+    pendingDecodes.delete(midi);
     return null;
   }
 }
@@ -119,22 +121,21 @@ export function playPluckedGuitarNote(note: Note, startTime?: number, durationSe
   const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
   const midi = noteToMidi(note);
 
-  // If real sampled sound is available, play high-definition acoustic sample
+  // If real sample buffer is already decoded, use sampled sound
   const cachedBuffer = sampleBufferCache.get(midi);
   if (cachedBuffer) {
     playSampledVoice(cachedBuffer, t, durationSec);
     return;
   }
 
-  // If sample is not decoded yet, decode asynchronously for next time and play acoustic synth
+  // Trigger on-demand background decode for subsequent plucks
   if (soundfontRawData) {
-    decodeMidiNote(midi).then((buf) => {
-      if (buf && startTime === undefined && Math.abs(ctx.currentTime - t) < 0.05) {
-        // Can use next time
-      }
-    });
+    decodeNoteOnDemand(midi).catch(() => {});
+  } else if (!isSoundfontFetching) {
+    fetchSoundfontData();
   }
 
+  // Instant zero-lag acoustic physical synthesis voice
   playPhysicalSynthVoice(note, t, durationSec);
 }
 
@@ -148,7 +149,6 @@ function playSampledVoice(buffer: AudioBuffer, t: number, durationSec: number): 
   const gainNode = ctx.createGain();
   const safeDuration = Math.max(0.08, durationSec);
 
-  // Natural acoustic sustain and release
   gainNode.gain.setValueAtTime(0.85, t);
   const sustainEnd = t + Math.max(0.05, safeDuration * 0.85);
   gainNode.gain.setValueAtTime(0.85, sustainEnd);
