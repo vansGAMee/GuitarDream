@@ -60,7 +60,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
       <div className="w-full sm:max-w-lg bg-surface-1 border-t sm:border border-strong-divider rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-strong-divider shrink-0">
-          <h2 className="text-title-lg font-bold text-on-surface">Song &amp; Project</h2>
+          <h2 className="text-title-lg font-bold text-on-surface">Проект и настройки</h2>
           <button
             onClick={onClose}
             className="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary hover:text-on-surface hover:bg-surface-variant transition-colors"
@@ -75,7 +75,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
           {/* Title & Rename */}
           <div className="bg-surface-2 p-4 rounded-xl border border-soft-divider">
             <label className="text-metadata-sm text-text-tertiary uppercase tracking-wider block mb-2 font-semibold">
-              Current Song Title
+              Название песни
             </label>
             {isEditingTitle ? (
               <div className="flex gap-2">
@@ -94,7 +94,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
                   onClick={handleSaveTitle}
                   className="px-4 py-2 bg-primary text-canvas font-semibold rounded-lg hover:bg-accent-light transition-colors text-metadata-sm"
                 >
-                  Save
+                  Сохранить
                 </button>
               </div>
             ) : (
@@ -105,9 +105,9 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
                     setTitleInput(song.title);
                     setIsEditingTitle(true);
                   }}
-                  className="text-metadata-sm text-primary hover:underline"
+                  className="text-metadata-sm text-primary hover:underline font-semibold"
                 >
-                  Rename
+                  Переименовать
                 </button>
               </div>
             )}
@@ -120,7 +120,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
               className="flex items-center justify-center gap-2 p-3 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-on-surface font-medium transition-colors text-control-md"
             >
               <IconPlus className="w-5 h-5 text-primary" />
-              <span>New Song</span>
+              <span>Новая песня</span>
             </button>
 
             <button
@@ -128,7 +128,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
               className="flex items-center justify-center gap-2 p-3 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-on-surface font-medium transition-colors text-control-md"
             >
               <IconCopy className="w-5 h-5 text-primary" />
-              <span>Duplicate</span>
+              <span>Дублировать</span>
             </button>
           </div>
 
@@ -139,21 +139,25 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
                 onClose();
                 onOpenExport();
               }}
-              className="w-full flex items-center justify-between p-3 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-xl text-on-surface transition-colors"
+              className="w-full flex items-center justify-between p-3.5 bg-surface-2 hover:bg-surface-3 border border-primary/40 hover:border-primary rounded-xl text-on-surface transition-all shadow-sm group"
             >
               <div className="flex items-center gap-3">
                 <IconDownload className="w-5 h-5 text-primary" />
                 <div className="text-left">
-                  <div className="text-body-standard font-semibold">Export Tablature</div>
-                  <div className="text-metadata-sm text-text-tertiary">ASCII, MIDI, MusicXML, PDF</div>
+                  <div className="text-body-standard font-bold text-primary group-hover:text-accent-light">
+                    Экспорт в ноты и табы
+                  </div>
+                  <div className="text-metadata-sm text-text-secondary">
+                    Нотная партитура (PDF со скрипичным ключом), MusicXML, MIDI, TXT
+                  </div>
                 </div>
               </div>
-              <span className="text-text-tertiary">{'→'}</span>
+              <span className="text-primary font-bold">{'→'}</span>
             </button>
 
             <button
               onClick={toggleMetronome}
-              className={`w-full flex items-center justify-between p-3 border rounded-xl transition-colors ${
+              className={`w-full flex items-center justify-between p-3.5 border rounded-xl transition-colors ${
                 isMetronomeEnabled
                   ? 'bg-primary/10 border-primary text-primary'
                   : 'bg-surface-2 hover:bg-surface-3 border-soft-divider text-on-surface'
@@ -161,16 +165,16 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
             >
               <div className="flex items-center gap-3">
                 <IconMetronome className="w-5 h-5" />
-                <span className="text-body-standard font-semibold">Metronome Audio</span>
+                <span className="text-body-standard font-semibold">Студийный метроном</span>
               </div>
-              <span className="text-metadata-sm font-bold uppercase">{isMetronomeEnabled ? 'ON' : 'OFF'}</span>
+              <span className="text-metadata-sm font-bold uppercase">{isMetronomeEnabled ? 'ВКЛ' : 'ВЫКЛ'}</span>
             </button>
           </div>
 
           {/* Local Songs List */}
           <div>
             <label className="text-metadata-sm text-text-tertiary uppercase tracking-wider block mb-3 font-semibold">
-              Recent Local Songs ({songsList.length})
+              Сохраненные песни ({songsList.length})
             </label>
             <div className="space-y-2 max-h-48 overflow-y-auto hide-scrollbar">
               {songsList.map((s) => {
@@ -187,10 +191,10 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
                   >
                     <div className="truncate mr-3">
                       <div className="font-semibold text-body-standard truncate text-on-surface">
-                        {s.title} {isCurrent && <span className="text-xs text-primary font-normal">(Current)</span>}
+                        {s.title} {isCurrent && <span className="text-xs text-primary font-normal">(Текущая)</span>}
                       </div>
                       <div className="text-metadata-sm text-text-tertiary">
-                        {s.bpm} BPM • {s.steps.length} steps • {new Date(s.updatedAt).toLocaleDateString()}
+                        {s.bpm} BPM • {s.steps.length} шагов • {new Date(s.updatedAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
@@ -203,19 +207,19 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
           <div className="pt-2">
             {showDeleteConfirm ? (
               <div className="p-4 bg-error-container/20 border border-error-container rounded-xl text-center space-y-3">
-                <p className="text-sm text-error font-medium">Delete &quot;{song.title}&quot;? This cannot be undone.</p>
+                <p className="text-sm text-error font-medium">Удалить песню &quot;{song.title}&quot;? Это действие нельзя отменить.</p>
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
                     className="px-4 py-2 bg-surface-3 text-on-surface rounded-lg text-metadata-sm font-semibold"
                   >
-                    Cancel
+                    Отмена
                   </button>
                   <button
                     onClick={handleDelete}
                     className="px-4 py-2 bg-error text-canvas rounded-lg text-metadata-sm font-semibold"
                   >
-                    Confirm Delete
+                    Удалить
                   </button>
                 </div>
               </div>
@@ -225,7 +229,7 @@ export const SongMenuSheet: React.FC<SongMenuSheetProps> = ({ isOpen, onClose, o
                 className="w-full flex items-center justify-center gap-2 p-3 text-error/80 hover:text-error hover:bg-error-container/10 border border-error/20 rounded-xl text-metadata-sm font-medium transition-colors"
               >
                 <IconTrash className="w-4 h-4" />
-                <span>Delete Current Song</span>
+                <span>Удалить текущую песню</span>
               </button>
             )}
           </div>
