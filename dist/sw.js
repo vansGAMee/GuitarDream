@@ -1,10 +1,11 @@
-const CACHE_NAME = 'fretboard-studio-v1';
+﻿const CACHE_NAME = 'fretboard-studio-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/favicon.svg',
-  '/icon.svg'
+  '/icon.svg',
+  '/soundfonts/acoustic_guitar_steel.json'
 ];
 
 self.addEventListener('install', (event) => {
