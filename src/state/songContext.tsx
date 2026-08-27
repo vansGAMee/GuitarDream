@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { Song, Step, Note, NoteDuration, GuitarString, AppMode, FxSettings, createEmptySong } from '../types/music';
 import { BoundedHistory } from './history';
 import { dbSaveSong, dbGetSong, dbGetAllSongs, dbDeleteSong, dbGetSetting, dbSetSetting } from '../storage/db';
-import { globalPlaybackEngine } from '../audio/playbackEngine';
+import { globalPlaybackEngine, LoopRange } from '../audio/playbackEngine';
+import { parsePastedTab } from '../music/tabParser';
 
 interface SongContextType {
   song: Song;
@@ -14,10 +15,12 @@ interface SongContextType {
   hasSeenAdvanceHint: boolean;
   canUndo: boolean;
   canRedo: boolean;
+  loopRange: LoopRange;
   
   // Note / Step operations
   toggleDraftNote: (stringIndex: GuitarString, fret: number) => void;
   commitStep: () => void;
+  stepBack: () => void;
   setDuration: (duration: NoteDuration) => void;
   selectStepForEditing: (index: number | null) => void;
   saveEditedStep: () => void;
@@ -25,6 +28,8 @@ interface SongContextType {
   deleteStep: (index: number) => void;
   insertStep: (index: number, position: 'before' | 'after') => void;
   duplicateStep: (index: number) => void;
+  pasteSteps: (text: string) => boolean;
+  setLoopRange: (range: LoopRange) => void;
   
   // Song operations
   setBpm: (bpm: number) => void;
@@ -55,9 +60,10 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedDuration, setSelectedDuration] = useState<NoteDuration>('quarter');
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [activeMode, setActiveModeState] = useState<AppMode>('TAB');
-  const [hasSeenAdvanceHint, setHasSeenAdvanceHint] = useState<boolean>(true); // default true while loading
+  const [hasSeenAdvanceHint, setHasSeenAdvanceHint] = useState<boolean>(true);
   const [canUndoState, setCanUndoState] = useState<boolean>(false);
   const [canRedoState, setCanRedoState] = useState<boolean>(false);
+  const [loopRange, setLoopRangeState] = useState<LoopRange>(null);
 
   const historyRef = useRef<BoundedHistory<Song>>(new BoundedHistory<Song>(50));
   const autosaveTimerRef = useRef<number | null>(null);
@@ -100,7 +106,6 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSong(all[0]);
           globalPlaybackEngine.setSong(all[0]);
         } else {
-          // Create and save a fresh empty song
           const fresh = createEmptySong('Untitled Riff');
           await dbSaveSong(fresh);
           await dbSetSetting(LAST_SONG_KEY, fresh.id);
@@ -160,14 +165,11 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingIdx = prev.findIndex((n) => n.string === stringIndex);
       if (existingIdx !== -1) {
         if (prev[existingIdx].fret === fret) {
-          // Tapping same fret again deselects it
           return prev.filter((_, idx) => idx !== existingIdx);
         } else {
-          // Replace fret on same string
           return prev.map((n, idx) => (idx === existingIdx ? { string: stringIndex, fret } : n));
         }
       } else {
-        // Add note for this string
         return [...prev, { string: stringIndex, fret }];
       }
     });
@@ -177,7 +179,6 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const commitStep = useCallback(() => {
     recordHistory(song);
 
-    // Sort notes by string 0..5
     const sortedNotes = [...draftNotes].sort((a, b) => a.string - b.string);
 
     const newStep: Step = {
@@ -186,21 +187,65 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
       duration: selectedDuration,
     };
 
-    setSong((prev) => ({
-      ...prev,
-      steps: [...prev.steps, newStep],
-      updatedAt: Date.now(),
-    }));
+    if (editingStepIndex !== null) {
+      // Advance while editing: update current step, then move to next
+      setSong((prev) => {
+        const nextSteps = [...prev.steps];
+        nextSteps[editingStepIndex] = newStep;
+        return { ...prev, steps: nextSteps, updatedAt: Date.now() };
+      });
+      if (editingStepIndex + 1 < song.steps.length) {
+        setEditingStepIndex(editingStepIndex + 1);
+        setDraftNotes([...song.steps[editingStepIndex + 1].notes]);
+        setSelectedDuration(song.steps[editingStepIndex + 1].duration);
+      } else {
+        setEditingStepIndex(null);
+        setDraftNotes([]);
+      }
+    } else {
+      setSong((prev) => ({
+        ...prev,
+        steps: [...prev.steps, newStep],
+        updatedAt: Date.now(),
+      }));
+      setDraftNotes([]);
+    }
 
-    // Clear draft
-    setDraftNotes([]);
-
-    // Dismiss advance hint on first commit
     if (!hasSeenAdvanceHint) {
       setHasSeenAdvanceHint(true);
       dbSetSetting(ONBOARDING_HINT_KEY, true);
     }
-  }, [draftNotes, selectedDuration, song, recordHistory, hasSeenAdvanceHint]);
+  }, [draftNotes, selectedDuration, song, recordHistory, editingStepIndex, hasSeenAdvanceHint]);
+
+  // Step Back / Return to previous note
+  const stepBack = useCallback(() => {
+    if (draftNotes.length > 0) {
+      // Clear draft notes first
+      setDraftNotes([]);
+      return;
+    }
+
+    if (editingStepIndex !== null) {
+      if (editingStepIndex > 0) {
+        const prevIdx = editingStepIndex - 1;
+        setEditingStepIndex(prevIdx);
+        setDraftNotes([...song.steps[prevIdx].notes]);
+        setSelectedDuration(song.steps[prevIdx].duration);
+      } else {
+        setEditingStepIndex(null);
+        setDraftNotes([]);
+      }
+      return;
+    }
+
+    if (song.steps.length > 0) {
+      // Select last step for editing
+      const lastIdx = song.steps.length - 1;
+      setEditingStepIndex(lastIdx);
+      setDraftNotes([...song.steps[lastIdx].notes]);
+      setSelectedDuration(song.steps[lastIdx].duration);
+    }
+  }, [draftNotes, editingStepIndex, song.steps]);
 
   // Set Duration
   const setDuration = useCallback((duration: NoteDuration) => {
@@ -319,6 +364,33 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, [recordHistory, song]);
 
+  // Paste Steps from clipboard
+  const pasteSteps = useCallback((text: string): boolean => {
+    const parsed = parsePastedTab(text, selectedDuration);
+    if (parsed.length === 0) return false;
+
+    recordHistory(song);
+    setSong((prev) => {
+      let nextSteps = [...prev.steps];
+      if (editingStepIndex !== null) {
+        nextSteps.splice(editingStepIndex + 1, 0, ...parsed);
+      } else {
+        nextSteps = [...nextSteps, ...parsed];
+      }
+      return { ...prev, steps: nextSteps, updatedAt: Date.now() };
+    });
+
+    setEditingStepIndex(null);
+    setDraftNotes([]);
+    return true;
+  }, [editingStepIndex, recordHistory, selectedDuration, song]);
+
+  // Loop Range for Practice / Player
+  const setLoopRange = useCallback((range: LoopRange) => {
+    setLoopRangeState(range);
+    globalPlaybackEngine.setLoopRange(range);
+  }, []);
+
   // BPM
   const setBpm = useCallback((bpm: number) => {
     recordHistory(song);
@@ -354,6 +426,7 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
     historyRef.current.clear();
     setEditingStepIndex(null);
     setDraftNotes([]);
+    setLoopRangeState(null);
     await dbSaveSong(fresh);
     await dbSetSetting(LAST_SONG_KEY, fresh.id);
     setSong(fresh);
@@ -370,6 +443,7 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
       historyRef.current.clear();
       setEditingStepIndex(null);
       setDraftNotes([]);
+      setLoopRangeState(null);
       await dbSetSetting(LAST_SONG_KEY, loaded.id);
       setSong(loaded);
       updateUndoRedoFlags();
@@ -450,6 +524,85 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [song, updateUndoRedoFlags]);
 
+  // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+C, Ctrl+V, Space, Arrows, 1-5)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept when user is typing inside an input/textarea
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+
+      // Ctrl+Z: Undo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+
+      // Ctrl+Y or Ctrl+Shift+Z: Redo
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+      ) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      // Ctrl+C: Copy current step/song
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        const stepToCopy = editingStepIndex !== null ? [song.steps[editingStepIndex]] : song.steps;
+        if (stepToCopy.length > 0) {
+          navigator.clipboard?.writeText(JSON.stringify(stepToCopy));
+        }
+        return;
+      }
+
+      // Ctrl+V: Paste steps from clipboard
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        navigator.clipboard?.readText().then((text) => {
+          if (text) pasteSteps(text);
+        });
+        return;
+      }
+
+      // Space: in PLAY mode -> toggle play/pause; in TAB mode -> commit & advance
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (activeMode === 'PLAY') {
+          globalPlaybackEngine.togglePlay();
+        } else {
+          commitStep();
+        }
+        return;
+      }
+
+      // ArrowRight / Enter: Advance forward
+      if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        e.preventDefault();
+        commitStep();
+        return;
+      }
+
+      // ArrowLeft / Backspace: Step back
+      if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+        e.preventDefault();
+        stepBack();
+        return;
+      }
+
+      // Number keys 1..5: Change rhythm duration
+      if (e.key === '1') setDuration('whole');
+      if (e.key === '2') setDuration('half');
+      if (e.key === '3') setDuration('quarter');
+      if (e.key === '4') setDuration('eighth');
+      if (e.key === '5') setDuration('sixteenth');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, song.steps, editingStepIndex, pasteSteps, activeMode, commitStep, stepBack, setDuration]);
+
   return (
     <SongContext.Provider
       value={{
@@ -462,8 +615,10 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasSeenAdvanceHint,
         canUndo: canUndoState,
         canRedo: canRedoState,
+        loopRange,
         toggleDraftNote,
         commitStep,
+        stepBack,
         setDuration,
         selectStepForEditing,
         saveEditedStep,
@@ -471,6 +626,8 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
         deleteStep,
         insertStep,
         duplicateStep,
+        pasteSteps,
+        setLoopRange,
         setBpm,
         setTitle,
         updateFx,

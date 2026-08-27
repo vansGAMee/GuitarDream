@@ -12,7 +12,7 @@ import { TapTempoCalculator } from '../../music/bpm';
 import { playTapSound } from '../../audio/metronome';
 
 export const PlayMode: React.FC = () => {
-  const { song, setBpm } = useSong();
+  const { song, setBpm, loopRange, setLoopRange } = useSong();
   const { currentStepIndex, isPlaying } = usePlayback();
   const fretboardScrollRef = useRef<HTMLDivElement>(null);
   const [isFxOpen, setIsFxOpen] = useState(false);
@@ -97,6 +97,19 @@ export const PlayMode: React.FC = () => {
             onToggleTappingActive={(active) => setIsTappingActive(active)}
           />
         </div>
+
+        {/* Custom Loop Range Indicator */}
+        {loopRange && (
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/50 px-3 py-1 rounded-full text-xs text-primary font-semibold">
+            <span>Цикл: шаги #{loopRange.startIndex + 1}–#{loopRange.endIndex + 1}</span>
+            <button
+              onClick={() => setLoopRange(null)}
+              className="text-on-surface hover:text-primary underline ml-1"
+            >
+              Сброс
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Dominant Centered Fretboard */}
@@ -106,7 +119,7 @@ export const PlayMode: React.FC = () => {
           className="w-full max-w-4xl h-[340px] rounded-2xl overflow-hidden fretboard-wood shadow-2xl relative flex border-2 border-surface-container-lowest"
         >
           {/* Nut & String Labels */}
-          <div className="w-10 h-full bg-[#111] border-r-4 border-[#222] flex flex-col justify-around py-4 z-20 font-mono text-sm font-bold text-on-surface items-center shadow-md shrink-0">
+          <div className="w-10 h-full bg-[#111] border-r-4 border-[#222] flex flex-col justify-around py-4 z-20 font-mono text-sm font-bold text-on-surface items-center shadow-md shrink-0 select-none">
             {STRING_NAMES.map((name, idx) => (
               <span key={idx}>{name}</span>
             ))}

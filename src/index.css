@@ -1,4 +1,4 @@
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -68,6 +68,7 @@ body {
 .fretboard-wood {
   background: linear-gradient(90deg, #2D1B15 0%, #3E2723 50%, #2D1B15 100%);
   box-shadow: inset 0 18px 32px -20px rgba(0, 0, 0, 0.9), inset 0 -18px 32px -20px rgba(0, 0, 0, 0.9);
+  will-change: transform;
 }
 
 .fret-wire-only {
@@ -165,23 +166,25 @@ body {
   border-top: 1px solid #353B45;
   border-bottom: 1px solid #0B0B0D;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, background 0.1s ease;
 }
 .hardware-btn:active {
   background: #1a1c21;
   border-top: 1px solid #0B0B0D;
   border-bottom: 1px solid #353B45;
   box-shadow: none;
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.97);
 }
 
 /* Pulse animation for active playback notes */
 @keyframes pulseNote {
-  0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 5px rgba(201, 162, 74, 0.5); }
-  50% { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 16px rgba(201, 162, 74, 0.9); }
-  100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 5px rgba(201, 162, 74, 0.5); }
+  0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 6px rgba(201, 162, 74, 0.5); }
+  50% { transform: translate(-50%, -50%) scale(1.18); box-shadow: 0 0 20px rgba(201, 162, 74, 0.95); }
+  100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 6px rgba(201, 162, 74, 0.5); }
 }
 .playing-note {
-  animation: pulseNote 0.22s ease-out;
+  animation: pulseNote 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, box-shadow;
 }
 
 /* Utility to hide scrollbars */
@@ -219,9 +222,10 @@ body {
   height: 100%;
   position: relative;
   z-index: 30;
+  transition: background-color 0.1s ease;
 }
 .touch-row:active {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(235, 193, 101, 0.15);
 }
 
 .playhead {
@@ -229,7 +233,7 @@ body {
   top: 0;
   bottom: 0;
   width: 2px;
-  background: rgba(235, 193, 101, 0.5);
+  background: rgba(235, 193, 101, 0.7);
   z-index: 15;
   pointer-events: none;
 }
@@ -256,6 +260,12 @@ body {
   background: #ebc165;
   border-radius: 50%;
   z-index: -1;
+}
+
+/* Smooth GPU acceleration */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Reduced motion preference */

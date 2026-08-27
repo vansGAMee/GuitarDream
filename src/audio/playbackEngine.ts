@@ -5,11 +5,17 @@ import { playMetronomeTick } from './metronome';
 
 export type PlaybackListener = (stepIndex: number, isPlaying: boolean) => void;
 
+export type LoopRange = {
+  startIndex: number;
+  endIndex: number;
+} | null;
+
 export class PlaybackEngine {
   private song: Song | null = null;
   private isPlaying = false;
   private isLooping = true;
   private isMetronomeEnabled = false;
+  private loopRange: LoopRange = null;
   private currentStepIndex = 0;
   private schedulerStepIndex = 0;
   private nextStepTime = 0;
@@ -39,6 +45,19 @@ export class PlaybackEngine {
 
   public getLoop(): boolean {
     return this.isLooping;
+  }
+
+  public setLoopRange(range: LoopRange): void {
+    this.loopRange = range;
+    if (range && (this.currentStepIndex < range.startIndex || this.currentStepIndex > range.endIndex)) {
+      this.currentStepIndex = range.startIndex;
+      this.schedulerStepIndex = range.startIndex;
+      this.notifyListeners();
+    }
+  }
+
+  public getLoopRange(): LoopRange {
+    return this.loopRange;
   }
 
   public setMetronome(enabled: boolean): void {
@@ -90,22 +109,25 @@ export class PlaybackEngine {
     this.isPlaying = true;
     this.clearTimeouts();
 
-    if (this.currentStepIndex >= this.song.steps.length) {
+    // Check if within custom loop range
+    if (this.loopRange) {
+      if (this.currentStepIndex < this.loopRange.startIndex || this.currentStepIndex > this.loopRange.endIndex) {
+        this.currentStepIndex = this.loopRange.startIndex;
+      }
+    } else if (this.currentStepIndex >= this.song.steps.length) {
       this.currentStepIndex = 0;
     }
 
     this.schedulerStepIndex = this.currentStepIndex;
-    this.nextStepTime = ctx.currentTime + 0.05;
+    this.nextStepTime = ctx.currentTime + 0.04;
     this.currentBeatInMeasure = 0;
 
     this.notifyListeners();
 
-    // Start timer loop
     this.timerId = window.setInterval(() => {
       this.scheduler();
     }, this.lookaheadMs);
 
-    // Initial run
     this.scheduler();
   }
 
@@ -125,8 +147,9 @@ export class PlaybackEngine {
 
   public restart(): void {
     this.pause();
-    this.currentStepIndex = 0;
-    this.schedulerStepIndex = 0;
+    const startIdx = this.loopRange ? this.loopRange.startIndex : 0;
+    this.currentStepIndex = startIdx;
+    this.schedulerStepIndex = startIdx;
     this.currentBeatInMeasure = 0;
     this.notifyListeners();
     this.play();
@@ -144,7 +167,6 @@ export class PlaybackEngine {
     if (!this.song || !this.isPlaying || this.song.steps.length === 0) return;
     const ctx = getAudioContext();
 
-    // Prevent scheduling runaway: max 12 steps per tick
     let stepsScheduledInTick = 0;
 
     while (
@@ -164,18 +186,21 @@ export class PlaybackEngine {
       this.currentBeatInMeasure += beats;
       stepsScheduledInTick++;
 
-      const nextIdx = stepIdx + 1;
-      if (nextIdx >= this.song.steps.length) {
+      // Range boundary check
+      const isLoopEnd = this.loopRange
+        ? stepIdx >= this.loopRange.endIndex
+        : stepIdx + 1 >= this.song.steps.length;
+
+      if (isLoopEnd) {
         if (this.isLooping) {
-          this.schedulerStepIndex = 0;
+          this.schedulerStepIndex = this.loopRange ? this.loopRange.startIndex : 0;
         } else {
-          // Non-looping: schedule stop at song end
           const delayToStop = Math.max(0, (this.nextStepTime - ctx.currentTime) * 1000);
           this.stopTimeout = window.setTimeout(() => {
             if (this.isPlaying) {
               this.pause();
-              this.currentStepIndex = 0;
-              this.schedulerStepIndex = 0;
+              this.currentStepIndex = this.loopRange ? this.loopRange.startIndex : 0;
+              this.schedulerStepIndex = this.currentStepIndex;
               this.notifyListeners();
             }
           }, delayToStop);
@@ -187,7 +212,7 @@ export class PlaybackEngine {
           break;
         }
       } else {
-        this.schedulerStepIndex = nextIdx;
+        this.schedulerStepIndex = stepIdx + 1;
       }
     }
   }
@@ -195,20 +220,16 @@ export class PlaybackEngine {
   private scheduleStep(step: Step, time: number, durationSec: number, stepIndex: number): void {
     if (!this.song) return;
 
-    // Metronome tick
     if (this.isMetronomeEnabled) {
       const isAccent = Math.floor(this.currentBeatInMeasure) % this.song.timeSignature.numerator === 0;
       playMetronomeTick(isAccent, time);
     }
 
-    // Play guitar chord / note
     if (step.notes && step.notes.length > 0) {
-      // Natural ring-out slightly longer than step duration, but capped to avoid drone
       const noteRingSec = Math.max(0.1, Math.min(durationSec * 1.2, 1.8));
       playChord(step.notes, time, noteRingSec);
     }
 
-    // Schedule UI update
     const ctx = getAudioContext();
     const delayToUi = Math.max(0, (time - ctx.currentTime) * 1000);
     const timeoutId = window.setTimeout(() => {
