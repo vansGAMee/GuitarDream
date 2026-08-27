@@ -1,9 +1,9 @@
-export type GuitarString = 0 | 1 | 2 | 3 | 4 | 5;
+﻿export type GuitarString = 0 | 1 | 2 | 3 | 4 | 5;
 
-export const STRING_NAMES = ['e', 'B', 'G', 'D', 'A', 'E'] as const;
+export const STRING_NAMES = ['E', 'B', 'G', 'D', 'A', 'E'] as const;
 
 export const OPEN_STRING_MIDI = [
-  64, // 0 = high e (E4)
+  64, // 0 = high E (E4)
   59, // 1 = B (B3)
   55, // 2 = G (G3)
   50, // 3 = D (D3)
@@ -36,15 +36,15 @@ export type TimeSignature = {
 
 export type FxSettings = {
   driveEnabled: boolean;
-  driveAmount: number; // 0 to 100
+  driveAmount: number;
 
   delayEnabled: boolean;
-  delayMix: number; // 0 to 1
-  delayTime: number; // 0.05 to 1.0 (seconds)
-  delayFeedback: number; // 0 to 0.9
+  delayMix: number;
+  delayTime: number;
+  delayFeedback: number;
 
   reverbEnabled: boolean;
-  reverbMix: number; // 0 to 1
+  reverbMix: number;
 };
 
 export type Song = {

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { Song, createEmptySong } from '../types/music';
 import { generateAsciiTab } from '../export/asciiTab';
 import { generateMidiFile } from '../export/midiExport';
@@ -35,12 +35,11 @@ describe('Exports (ASCII, MIDI, MusicXML)', () => {
     const ascii = generateAsciiTab(testSong);
     expect(ascii).toContain('Title: Test Riff');
     expect(ascii).toContain('Tempo: 120 BPM');
-    expect(ascii).toContain('e|-');
+    expect(ascii).toContain('E|-');
     expect(ascii).toContain('B|-');
     expect(ascii).toContain('G|-');
     expect(ascii).toContain('D|-');
     expect(ascii).toContain('A|-');
-    expect(ascii).toContain('E|-');
     expect(ascii).toContain('0'); // low E
     expect(ascii).toContain('2'); // A & D
   });
