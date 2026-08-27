@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+﻿import React, { useRef, useEffect, useState } from 'react';
 import { useSong } from '../../state/songContext';
 import { usePlayback } from '../../state/playbackContext';
 import { STRING_NAMES, Note } from '../../types/music';
@@ -8,12 +8,18 @@ import { TapTempoButton } from './TapTempoButton';
 import { PlayTransport } from './PlayTransport';
 import { Fretboard } from '../Fretboard/Fretboard';
 import { FxSheet } from '../Shell/FxSheet';
+import { TapTempoCalculator } from '../../music/bpm';
+import { playTapSound } from '../../audio/metronome';
 
 export const PlayMode: React.FC = () => {
-  const { song } = useSong();
+  const { song, setBpm } = useSong();
   const { currentStepIndex, isPlaying } = usePlayback();
   const fretboardScrollRef = useRef<HTMLDivElement>(null);
   const [isFxOpen, setIsFxOpen] = useState(false);
+  const [isTappingActive, setIsTappingActive] = useState(false);
+
+  const tapCalculatorRef = useRef<TapTempoCalculator>(new TapTempoCalculator());
+  const tapTimeoutRef = useRef<number | null>(null);
 
   // Active notes for currently playing step
   const activeStep = song.steps[currentStepIndex];
@@ -31,7 +37,6 @@ export const PlayMode: React.FC = () => {
           const containerWidth = container.clientWidth;
           const targetScrollLeft = Math.max(0, geom.center - containerWidth / 2);
 
-          // Only scroll if outside visible bounds
           if (
             geom.left < container.scrollLeft + 60 ||
             geom.right > container.scrollLeft + containerWidth - 60
@@ -46,8 +51,39 @@ export const PlayMode: React.FC = () => {
     }
   }, [currentStepIndex, activeNotes]);
 
+  // Handle tap anywhere on screen when Tap Mode is active
+  const handleScreenTap = () => {
+    playTapSound();
+    const calculatedBpm = tapCalculatorRef.current.tap();
+    if (calculatedBpm !== null) {
+      setBpm(calculatedBpm);
+    }
+
+    if (tapTimeoutRef.current !== null) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+    tapTimeoutRef.current = window.setTimeout(() => {
+      setIsTappingActive(false);
+      tapCalculatorRef.current.reset();
+    }, 2500);
+  };
+
   return (
     <section id="view-play" className="relative flex flex-col h-full w-full bg-canvas overflow-hidden justify-between">
+      {/* Tap Tempo Full Screen Overlay when active */}
+      {isTappingActive && (
+        <div
+          onClick={handleScreenTap}
+          className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center cursor-pointer select-none animate-fade-in"
+        >
+          <div className="p-6 bg-surface-1 border-2 border-primary rounded-3xl text-center shadow-2xl space-y-3 pointer-events-none transform scale-105 transition-all">
+            <div className="text-4xl font-bold text-primary font-mono">{song.bpm} BPM</div>
+            <p className="text-sm font-semibold text-on-surface">Тапайте в любом месте экрана в ритм</p>
+            <p className="text-xs text-text-tertiary">Темп зафиксируется автоматически через пару секунд</p>
+          </div>
+        </div>
+      )}
+
       {/* Top Header & BPM Control */}
       <div className="flex flex-col items-center pt-4 pb-2 px-4 shrink-0 space-y-2">
         <h1 className="text-title-lg font-bold text-on-surface text-center truncate max-w-xs">
@@ -56,7 +92,10 @@ export const PlayMode: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <BpmControl />
-          <TapTempoButton />
+          <TapTempoButton
+            isTappingActive={isTappingActive}
+            onToggleTappingActive={(active) => setIsTappingActive(active)}
+          />
         </div>
       </div>
 

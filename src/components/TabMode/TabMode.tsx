@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+﻿import React, { useRef } from 'react';
 import { useSong } from '../../state/songContext';
 import { STRING_NAMES } from '../../types/music';
 import { TabCanvas } from './TabCanvas';
@@ -27,8 +27,8 @@ export const TabMode: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
             <h2 className="text-control-md font-bold text-on-surface">{song.title}</h2>
-            <span className="text-metadata-sm text-text-tertiary">
-              {song.timeSignature.numerator}/{song.timeSignature.denominator} � {song.bpm} BPM
+            <span className="text-metadata-sm text-text-tertiary font-mono">
+              {song.timeSignature.numerator}/{song.timeSignature.denominator} • {song.bpm} BPM
             </span>
           </div>
 
@@ -54,16 +54,16 @@ export const TabMode: React.FC = () => {
         <div className="px-4 flex justify-between items-center mb-2">
           <span className="text-metadata-sm text-text-tertiary truncate">
             {draftNotes.length === 0
-              ? 'Tap fret to add note. Tap left edge to advance/rest.'
-              : `${draftNotes.length} note${draftNotes.length > 1 ? 's' : ''} in chord. Tap left to commit.`}
+              ? 'Выберите лад. Тапните по левому краю или кнопке ДАЛЕЕ для следующей ноты.'
+              : `${draftNotes.length} нот в аккорде. Тапните левый край для фиксации.`}
           </span>
           <button
             id="btn-advance-manual"
             onClick={commitStep}
-            className="px-3 py-1.5 bg-surface-elevated hover:bg-surface-3 rounded-full text-label-bold font-bold text-on-surface hover:text-primary border border-strong-divider transition-all active:scale-95 text-xs flex items-center gap-1 shrink-0"
+            className="px-3.5 py-1.5 bg-primary-container hover:bg-accent-light rounded-full text-label-bold font-bold text-on-primary-container hover:text-canvas border border-primary/50 transition-all active:scale-95 text-xs flex items-center gap-1.5 shrink-0 shadow-md"
           >
-            <span>ADVANCE</span>
-            <IconArrowForward className="w-3.5 h-3.5" />
+            <span>ДАЛЕЕ</span>
+            <IconArrowForward className="w-4 h-4" />
           </button>
         </div>
 
@@ -73,7 +73,7 @@ export const TabMode: React.FC = () => {
           <div
             id="advance-zone"
             onClick={commitStep}
-            title="Tap here to commit notes and advance"
+            title="Тапните здесь для перехода к следующей ноте"
             className="absolute left-0 top-0 w-14 h-full z-40 bg-gradient-to-r from-black/50 via-black/20 to-transparent flex items-center justify-center cursor-pointer hover:from-primary/20 active:from-primary/40 transition-colors"
           >
             <IconArrowForward className="w-5 h-5 text-text-secondary opacity-60" />
@@ -82,7 +82,7 @@ export const TabMode: React.FC = () => {
           {/* First-time Onboarding Hint */}
           <OnboardingHint />
 
-          {/* String Labels Column (e, B, G, D, A, E) */}
+          {/* String Labels Column (E, B, G, D, A, E) */}
           <div className="w-8 h-full bg-[#111] border-r border-[#222] flex flex-col justify-around py-3 z-20 font-mono text-xs font-bold text-text-tertiary items-center shrink-0">
             {STRING_NAMES.map((name, idx) => (
               <span key={idx}>{name}</span>

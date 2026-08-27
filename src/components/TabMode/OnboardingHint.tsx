@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useSong } from '../../state/songContext';
 import { IconArrowForward } from '../Common/Icons';
 
@@ -10,10 +10,10 @@ export const OnboardingHint: React.FC = () => {
   return (
     <div
       onClick={dismissAdvanceHint}
-      className="absolute left-14 top-1/2 -translate-y-1/2 z-40 bg-surface-elevated/95 border border-primary text-primary px-3 py-1.5 rounded-lg shadow-xl text-metadata-sm font-medium flex items-center gap-2 cursor-pointer animate-pulse"
+      className="absolute left-16 top-1/2 -translate-y-1/2 z-40 bg-surface-elevated border-2 border-primary text-primary px-3.5 py-2 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 cursor-pointer animate-pulse select-none"
     >
-      <span>Tap left side to continue</span>
-      <IconArrowForward className="w-3.5 h-3.5" />
+      <span>Тапните по левому краю или кнопке ДАЛЕЕ для перехода</span>
+      <IconArrowForward className="w-4 h-4" />
     </div>
   );
 };
