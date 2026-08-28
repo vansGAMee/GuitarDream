@@ -10,10 +10,11 @@ import { Fretboard } from '../Fretboard/Fretboard';
 import { FxSheet } from '../Shell/FxSheet';
 import { TapTempoCalculator } from '../../music/bpm';
 import { playTapSound } from '../../audio/metronome';
+import { SongOverview } from '../Common/SongOverview';
 
 export const PlayMode: React.FC = () => {
   const { song, setBpm, loopRange, setLoopRange } = useSong();
-  const { currentStepIndex, isPlaying } = usePlayback();
+  const { currentStepIndex, isPlaying, seekStep } = usePlayback();
   const fretboardScrollRef = useRef<HTMLDivElement>(null);
   const [isFxOpen, setIsFxOpen] = useState(false);
   const [isTappingActive, setIsTappingActive] = useState(false);
@@ -110,6 +111,16 @@ export const PlayMode: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="w-full max-w-4xl shrink-0 self-center px-3">
+        <SongOverview
+          steps={song.steps}
+          timeSignature={song.timeSignature}
+          activeStepIndex={currentStepIndex}
+          onSelect={seekStep}
+          showProgress
+        />
       </div>
 
       {/* Dominant Centered Fretboard */}

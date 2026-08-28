@@ -57,7 +57,7 @@ export const SongProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [song, setSong] = useState<Song>(() => createEmptySong());
   const [songsList, setSongsList] = useState<Song[]>([]);
   const [draftNotes, setDraftNotes] = useState<Note[]>([]);
-  const [selectedDuration, setSelectedDuration] = useState<NoteDuration>('quarter');
+  const [selectedDuration, setSelectedDuration] = useState<NoteDuration>('eighth');
   const [editingStepIndex, setEditingStepIndex] = useState<number | null>(null);
   const [activeMode, setActiveModeState] = useState<AppMode>('TAB');
   const [hasSeenAdvanceHint, setHasSeenAdvanceHint] = useState<boolean>(true);

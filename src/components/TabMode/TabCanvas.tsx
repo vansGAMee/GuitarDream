@@ -1,8 +1,9 @@
 ﻿import React, { useRef, useEffect } from 'react';
 import { useSong } from '../../state/songContext';
 import { groupStepsIntoMeasures } from '../../music/measures';
-import { DURATION_LABELS } from '../../music/duration';
+import { DURATION_LABELS, DURATION_RATE_LABELS } from '../../music/duration';
 import { STRING_NAMES } from '../../types/music';
+import { SongOverview } from '../Common/SongOverview';
 
 // Heights for the 6 strings (percentage from top within the staff height)
 const STRING_ROW_PERCENTAGES = [10, 26, 42, 58, 74, 90] as const;
@@ -17,11 +18,14 @@ export const TabCanvas: React.FC = () => {
   useEffect(() => {
     const targetElement = editingStepIndex !== null ? activeStepElementRef.current : lastStepElementRef.current;
     if (targetElement) {
-      targetElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'end',
+      const frame = window.requestAnimationFrame(() => {
+        targetElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'center',
+        });
       });
+      return () => window.cancelAnimationFrame(frame);
     }
   }, [editingStepIndex, song.steps.length]);
 
@@ -55,6 +59,15 @@ export const TabCanvas: React.FC = () => {
           </button>
         </div>
       )}
+
+      <div className="sticky top-0 z-30 pb-1">
+        <SongOverview
+          steps={song.steps}
+          timeSignature={song.timeSignature}
+          activeStepIndex={editingStepIndex ?? song.steps.length - 1}
+          onSelect={selectStepForEditing}
+        />
+      </div>
 
       {Array.from({ length: Math.ceil(measures.length / measuresPerRow) }).map((_, rIdx) => {
         const rowMeasures = measures.slice(rIdx * measuresPerRow, (rIdx + 1) * measuresPerRow);
@@ -196,7 +209,7 @@ export const TabCanvas: React.FC = () => {
 
                                     {/* Duration label pill */}
                                     <div className="tab-duration absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] sm:text-[10px] font-mono text-text-tertiary font-medium select-none">
-                                      {DURATION_LABELS[step.duration].short}
+                                      {DURATION_RATE_LABELS[step.duration]}
                                     </div>
                                   </button>
                                 );

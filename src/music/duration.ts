@@ -16,6 +16,23 @@ export const DURATION_LABELS: Record<NoteDuration, { name: string; short: string
   sixteenth: { name: 'Sixteenth (1/16)', short: '1/16', symbol: 's' },
 };
 
+// User-facing step speed relative to the BPM pulse.
+export const DURATION_RATE_LABELS: Record<NoteDuration, string> = {
+  whole: '×¼',
+  half: '×½',
+  quarter: '×1',
+  eighth: '×2',
+  sixteenth: '×4',
+};
+
+export const DURATION_RATE_HELP: Record<NoteDuration, string> = {
+  whole: 'одна нота на 4 удара',
+  half: 'одна нота на 2 удара',
+  quarter: 'одна нота на удар',
+  eighth: '2 ноты на удар',
+  sixteenth: '4 ноты на удар',
+};
+
 export function durationToBeats(duration: NoteDuration): number {
   switch (duration) {
     case 'whole': return 4;
