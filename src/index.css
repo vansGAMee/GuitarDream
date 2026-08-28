@@ -231,6 +231,11 @@ button:active > svg {
   100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+@keyframes noteRipple {
+  from { opacity: 0.7; transform: scale(0.72); }
+  to { opacity: 0; transform: scale(1.7); }
+}
+
 @keyframes valueTick {
   from { opacity: 0.35; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
@@ -513,6 +518,16 @@ button:active > svg {
 
 .note-token:not(.playing-note) {
   animation: noteSettle 230ms var(--ease-spring);
+}
+
+.note-token::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(235, 193, 101, 0.72);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: noteRipple 430ms var(--ease-out) both;
 }
 
 /* Utility to hide scrollbars */
