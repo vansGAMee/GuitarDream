@@ -16,21 +16,22 @@ export const StepContextMenu: React.FC<StepContextMenuProps> = ({ stepIndex }) =
   } = useSong();
 
   return (
-    <div className="flex items-center gap-2 bg-surface-elevated border border-primary/50 px-3 py-1.5 rounded-xl shadow-lg animate-fade-in shrink-0">
-      <span className="text-metadata-sm font-semibold text-primary mr-1">
-        Editing Step #{stepIndex + 1}
+    <div className="step-context-menu flex items-center gap-1 px-1.5 py-1 rounded-xl animate-fade-in shrink-0">
+      <span className="text-[10px] sm:text-metadata-sm font-semibold text-primary px-1.5">
+        Шаг {stepIndex + 1}
       </span>
 
       <button
         onClick={saveEditedStep}
-        className="px-2.5 py-1 bg-primary text-canvas font-bold text-metadata-sm rounded-lg hover:bg-accent-light transition-colors"
+        className="px-2.5 py-1 bg-primary text-canvas font-bold text-[10px] sm:text-metadata-sm rounded-lg hover:bg-accent-light"
       >
-        Done
+        Готово
       </button>
 
       <button
         onClick={() => insertStep(stepIndex, 'before')}
-        title="Insert step before"
+        title="Вставить шаг перед текущим"
+        aria-label="Вставить шаг перед текущим"
         className="p-1.5 text-text-secondary hover:text-on-surface hover:bg-surface-3 rounded-lg transition-colors"
       >
         <IconPlus className="w-4 h-4" />
@@ -38,7 +39,8 @@ export const StepContextMenu: React.FC<StepContextMenuProps> = ({ stepIndex }) =
 
       <button
         onClick={() => duplicateStep(stepIndex)}
-        title="Duplicate step"
+        title="Дублировать шаг"
+        aria-label="Дублировать шаг"
         className="p-1.5 text-text-secondary hover:text-on-surface hover:bg-surface-3 rounded-lg transition-colors"
       >
         <IconCopy className="w-4 h-4" />
@@ -46,7 +48,8 @@ export const StepContextMenu: React.FC<StepContextMenuProps> = ({ stepIndex }) =
 
       <button
         onClick={() => deleteStep(stepIndex)}
-        title="Delete step"
+        title="Удалить шаг"
+        aria-label="Удалить шаг"
         className="p-1.5 text-error hover:bg-error-container/20 rounded-lg transition-colors"
       >
         <IconTrash className="w-4 h-4" />
@@ -54,7 +57,8 @@ export const StepContextMenu: React.FC<StepContextMenuProps> = ({ stepIndex }) =
 
       <button
         onClick={cancelEditing}
-        title="Cancel editing"
+        title="Отменить редактирование"
+        aria-label="Отменить редактирование"
         className="p-1.5 text-text-tertiary hover:text-on-surface rounded-lg transition-colors"
       >
         <IconClose className="w-4 h-4" />

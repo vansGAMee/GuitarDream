@@ -21,14 +21,18 @@ export function parsePastedTab(text: string, defaultDuration: NoteDuration = 'qu
   const lines = trimmed.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
   if (lines.length >= 6) {
     const stringLines: string[] = [];
-    const stringMap: Record<string, number> = { e: 0, E: 0, B: 1, b: 1, G: 2, g: 2, D: 3, d: 3, A: 4, a: 4 };
+    const stringMap: Record<string, number> = { B: 1, b: 1, G: 2, g: 2, D: 3, d: 3, A: 4, a: 4 };
 
     // Find 6 matching guitar string lines
     for (const line of lines) {
       const match = line.match(/^([eEBGDAebgda])\s*[:|](.*)$/);
       if (match) {
         const strName = match[1];
-        const sIdx = stringMap[strName] !== undefined ? stringMap[strName] : stringLines.length;
+        // A tab has two E strings. Assign the first E line to high E and the second to low E,
+        // regardless of whether an exporter uses `e` or `E` for the top line.
+        const sIdx = strName.toLowerCase() === 'e'
+          ? (stringLines[0] === undefined ? 0 : 5)
+          : stringMap[strName];
         stringLines[sIdx] = match[2];
       } else if (line.includes('|') || line.includes('-')) {
         stringLines.push(line);
@@ -47,6 +51,10 @@ export function parsePastedTab(text: string, defaultDuration: NoteDuration = 'qu
         for (let s = 0; s < 6; s++) {
           const char = (stringLines[s] || '')[col];
           if (char && char >= '0' && char <= '9') {
+            const previousChar = (stringLines[s] || '')[col - 1];
+            if (previousChar && previousChar >= '0' && previousChar <= '9') {
+              continue;
+            }
             hasFret = true;
             // Check for multi-digit fret
             let fretNum = parseInt(char);

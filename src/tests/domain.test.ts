@@ -5,6 +5,7 @@ import { noteToMidi, midiToFrequency, midiToNoteName } from '../music/midiNotes'
 import { groupStepsIntoMeasures } from '../music/measures';
 import { clampBpm, TapTempoCalculator } from '../music/bpm';
 import { BoundedHistory } from '../state/history';
+import { parsePastedTab } from '../music/tabParser';
 
 describe('Domain Models & Music Calculations', () => {
   it('correctly maps string orders and open string MIDI pitches', () => {
@@ -141,5 +142,27 @@ describe('Domain Models & Music Calculations', () => {
 
     const redoneTo2 = history.redo(undoneTo1!);
     expect(redoneTo2?.title).toBe('Riff 2');
+  });
+
+  it('parses both E strings and multi-digit frets from ASCII tab', () => {
+    const parsed = parsePastedTab([
+      'E|--0---10--|',
+      'B|--1-------|',
+      'G|--0-------|',
+      'D|--2-------|',
+      'A|--3-------|',
+      'E|--3-------|',
+    ].join('\n'));
+
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].notes).toEqual([
+      { string: 0, fret: 0 },
+      { string: 1, fret: 1 },
+      { string: 2, fret: 0 },
+      { string: 3, fret: 2 },
+      { string: 4, fret: 3 },
+      { string: 5, fret: 3 },
+    ]);
+    expect(parsed[1].notes).toEqual([{ string: 0, fret: 10 }]);
   });
 });

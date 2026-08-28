@@ -1,4 +1,4 @@
-﻿import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useSong } from '../../state/songContext';
 import { TabCanvas } from './TabCanvas';
 import { RhythmPicker } from './RhythmPicker';
@@ -20,18 +20,6 @@ export const TabMode: React.FC = () => {
   } = useSong();
 
   const fretboardScrollRef = useRef<HTMLDivElement>(null);
-  const scoreContainerRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll score down as new steps/rows are added on mobile and desktop
-  useEffect(() => {
-    if (editingStepIndex === null && scoreContainerRef.current) {
-      scoreContainerRef.current.scrollTo({
-        top: scoreContainerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }, [song.steps.length, editingStepIndex]);
-
   const handlePasteFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -48,25 +36,24 @@ export const TabMode: React.FC = () => {
     <section id="view-tab" className="animate-mode-in relative flex flex-col h-full w-full bg-canvas overflow-hidden">
       {/* Scrollable Score Section */}
       <div
-        ref={scoreContainerRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar"
+        className="tab-score-scroll flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar"
         style={{
           WebkitOverflowScrolling: 'touch',
           paddingBottom: 'calc(var(--tab-panel-h) + var(--nav-h) + 12px)',
         }}
       >
         {/* Controls Bar: Time/BPM info, Paste & Rhythm Picker */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-2.5 sm:mb-3">
+        <div className="tab-toolbar flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <span className="text-[11px] sm:text-xs text-text-tertiary font-mono bg-surface-1 px-2 py-1 rounded-lg border border-soft-divider">
-              {song.timeSignature.numerator}/{song.timeSignature.denominator} • {song.bpm} BPM
+            <span className="tab-meta text-[10px] sm:text-[11px] text-text-tertiary font-mono px-2 py-1 rounded-lg">
+              {song.timeSignature.numerator}/{song.timeSignature.denominator} · {song.bpm} BPM
             </span>
             <button
               onClick={handlePasteFromClipboard}
               title="Вставить ноты или табы из буфера обмена (Ctrl+V)"
-              className="px-2 py-1 bg-surface-2 hover:bg-surface-3 border border-soft-divider rounded-lg text-[11px] sm:text-xs font-semibold text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+              className="tab-paste px-2 py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-text-tertiary hover:text-primary flex items-center gap-1"
             >
-              <span>📋 Вставить (Ctrl+V)</span>
+              <span>Вставить · Ctrl+V</span>
             </button>
           </div>
 
@@ -86,7 +73,7 @@ export const TabMode: React.FC = () => {
       {/* Fixed Bottom Interactive Fretboard Input Area */}
       <div
         id="tab-input-panel"
-        className="absolute bottom-0 w-full bg-surface-dim border-t border-strong-divider flex flex-col z-30 shadow-2xl transition-all"
+        className="tab-input-panel absolute bottom-0 w-full bg-surface-dim border-t border-strong-divider flex flex-col z-30"
         style={{
           height: 'calc(var(--tab-panel-h) + var(--nav-h))',
           paddingBottom: 'var(--nav-h)',
@@ -94,7 +81,7 @@ export const TabMode: React.FC = () => {
         }}
       >
         {/* Step Navigation & Action Bar */}
-        <div className="px-3 sm:px-4 flex justify-between items-center mb-1.5 gap-2 shrink-0">
+        <div className="tab-action-bar px-3 sm:px-4 flex justify-between items-center mb-1.5 gap-2 shrink-0">
           {/* Back Step Button */}
           <button
             onClick={stepBack}
@@ -105,7 +92,10 @@ export const TabMode: React.FC = () => {
           </button>
 
           {/* Status Label */}
-          <span className="text-[11px] sm:text-xs text-text-tertiary truncate text-center flex-1">
+          <span
+            key={`${editingStepIndex ?? 'new'}-${draftNotes.length}`}
+            className="tab-entry-status text-[10px] sm:text-xs text-text-tertiary truncate text-center flex-1"
+          >
             {draftNotes.length === 0
               ? 'Выберите лад. Пробел/ДАЛЕЕ — переход.'
               : `${draftNotes.length} нот в аккорде. Пробел/ДАЛЕЕ — фиксация.`}
@@ -123,7 +113,7 @@ export const TabMode: React.FC = () => {
         </div>
 
         {/* The Interactive Fretboard Panel */}
-        <div className="flex-1 relative mx-2 sm:mx-3 rounded-xl overflow-hidden fretboard-wood shadow-2xl flex border border-strong-divider min-h-0">
+        <div className="tab-fret-input flex-1 relative mx-2 sm:mx-3 rounded-xl overflow-hidden fretboard-wood flex border border-strong-divider min-h-0">
           {/* Left Step-Back/Advance Zone */}
           <div
             id="advance-zone"

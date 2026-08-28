@@ -6,7 +6,7 @@ export const RhythmPicker: React.FC = () => {
   const { selectedDuration, setDuration } = useSong();
 
   return (
-    <div className="flex items-center gap-1 bg-surface-2 p-1 rounded-xl border border-soft-divider shrink-0">
+    <div className="rhythm-picker flex items-center gap-0.5 p-1 rounded-xl shrink-0" aria-label="Длительность ноты">
       {ALL_DURATIONS.map((dur) => {
         const isSelected = selectedDuration === dur;
         const info = DURATION_LABELS[dur];
@@ -15,11 +15,12 @@ export const RhythmPicker: React.FC = () => {
             key={dur}
             type="button"
             onClick={() => setDuration(dur)}
-            aria-label={`Select ${info.name}`}
-            className={`px-2.5 py-1 rounded-lg text-metadata-sm font-semibold transition-all active:scale-95 ${
+            aria-label={`Длительность ${info.short}`}
+            aria-pressed={isSelected}
+            className={`rhythm-option min-w-9 px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-metadata-sm font-semibold ${
               isSelected
-                ? 'bg-primary text-canvas shadow-sm'
-                : 'text-text-secondary hover:text-on-surface hover:bg-surface-3'
+                ? 'rhythm-option--active text-canvas'
+                : 'text-text-secondary hover:text-on-surface'
             }`}
           >
             {info.short}

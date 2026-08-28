@@ -9,9 +9,9 @@ let fxNode: GuitarFxNode | null = null;
 
 // Soundfont sample buffer cache: MIDI number -> AudioBuffer
 const sampleBufferCache = new Map<number, AudioBuffer>();
-const pendingDecodes = new Set<number>();
+const pendingDecodes = new Map<number, Promise<AudioBuffer | null>>();
 let soundfontRawData: Record<string, string> | null = null;
-let isSoundfontFetching = false;
+let soundfontLoadPromise: Promise<void> | null = null;
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -35,20 +35,27 @@ function base64ToArrayBuffer(base64Uri: string): ArrayBuffer {
 // Open string MIDI notes for instant acoustic priority decoding
 const CORE_GUITAR_MIDIS = [40, 45, 50, 55, 59, 64, 69, 74];
 
+function warmCoreGuitarSamples(): void {
+  if (!audioCtx || !soundfontRawData) return;
+  CORE_GUITAR_MIDIS.forEach((midi) => {
+    decodeNoteOnDemand(midi).catch(() => {});
+  });
+}
+
 export function getAudioContext(): AudioContext {
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     audioCtx = new AudioContextClass();
 
     compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-14, audioCtx.currentTime);
-    compressor.knee.setValueAtTime(6, audioCtx.currentTime);
-    compressor.ratio.setValueAtTime(8, audioCtx.currentTime);
-    compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
-    compressor.release.setValueAtTime(0.15, audioCtx.currentTime);
+    compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
+    compressor.knee.setValueAtTime(12, audioCtx.currentTime);
+    compressor.ratio.setValueAtTime(3, audioCtx.currentTime);
+    compressor.attack.setValueAtTime(0.01, audioCtx.currentTime);
+    compressor.release.setValueAtTime(0.22, audioCtx.currentTime);
 
     masterGain = audioCtx.createGain();
-    masterGain.gain.setValueAtTime(0.9, audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(0.84, audioCtx.currentTime);
 
     fxNode = new GuitarFxNode(audioCtx);
 
@@ -56,8 +63,8 @@ export function getAudioContext(): AudioContext {
     compressor.connect(masterGain);
     masterGain.connect(audioCtx.destination);
 
-    // Immediately fetch soundfont
-    fetchSoundfontData();
+    // Fetch and warm reusable samples as soon as the user unlocks Web Audio.
+    fetchSoundfontData().then(warmCoreGuitarSamples);
   }
 
   if (audioCtx.state === 'suspended') {
@@ -75,51 +82,55 @@ if (typeof window !== 'undefined') {
 }
 
 async function fetchSoundfontData(): Promise<void> {
-  if (isSoundfontFetching || soundfontRawData) return;
-  isSoundfontFetching = true;
+  if (soundfontRawData) return;
+  if (soundfontLoadPromise) return soundfontLoadPromise;
 
-  try {
-    const res = await fetch('/soundfonts/acoustic_guitar_steel.json');
-    if (!res.ok) throw new Error('Soundfont fetch failed');
-    soundfontRawData = await res.json();
+  soundfontLoadPromise = (async () => {
+    try {
+      const res = await fetch('/soundfonts/acoustic_guitar_steel.json');
+      if (!res.ok) throw new Error('Soundfont fetch failed');
+      soundfontRawData = await res.json();
 
-    // Immediately decode core guitar open strings so we have instant sampled audio for any pitch
-    if (audioCtx) {
-      for (const midi of CORE_GUITAR_MIDIS) {
-        decodeNoteOnDemand(midi).catch(() => {});
-      }
+      // Warm a sparse set across the guitar range. Nearby notes can use these instantly
+      // while their exact sample is decoded in the background.
+      warmCoreGuitarSamples();
+    } catch (err) {
+      console.error('Failed to load acoustic guitar soundfont:', err);
+    } finally {
+      soundfontLoadPromise = null;
     }
-  } catch (err) {
-    console.error('Failed to load acoustic guitar soundfont:', err);
-  } finally {
-    isSoundfontFetching = false;
-  }
+  })();
+
+  return soundfontLoadPromise;
 }
 
 async function decodeNoteOnDemand(midi: number): Promise<AudioBuffer | null> {
   if (sampleBufferCache.has(midi)) {
     return sampleBufferCache.get(midi)!;
   }
-  if (!soundfontRawData || !audioCtx || pendingDecodes.has(midi)) return null;
+  const existingDecode = pendingDecodes.get(midi);
+  if (existingDecode) return existingDecode;
+  if (!soundfontRawData || !audioCtx) return null;
 
-  pendingDecodes.add(midi);
-  const noteName = midiToSoundfontName(midi);
-  const base64 = soundfontRawData[noteName];
-  if (!base64) {
-    pendingDecodes.delete(midi);
-    return null;
-  }
+  const decodePromise = (async (): Promise<AudioBuffer | null> => {
+    const noteName = midiToSoundfontName(midi);
+    const base64 = soundfontRawData?.[noteName];
+    if (!base64 || !audioCtx) return null;
 
-  try {
-    const arrayBuffer = base64ToArrayBuffer(base64);
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    sampleBufferCache.set(midi, audioBuffer);
-    pendingDecodes.delete(midi);
-    return audioBuffer;
-  } catch {
-    pendingDecodes.delete(midi);
-    return null;
-  }
+    try {
+      const arrayBuffer = base64ToArrayBuffer(base64);
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      sampleBufferCache.set(midi, audioBuffer);
+      return audioBuffer;
+    } catch {
+      return null;
+    } finally {
+      pendingDecodes.delete(midi);
+    }
+  })();
+
+  pendingDecodes.set(midi, decodePromise);
+  return decodePromise;
 }
 
 export function getFxNode(): GuitarFxNode | null {
@@ -129,7 +140,7 @@ export function getFxNode(): GuitarFxNode | null {
   return fxNode;
 }
 
-export function playPluckedGuitarNote(note: Note, startTime?: number, durationSec = 1.0): void {
+export function playPluckedGuitarNote(note: Note, startTime?: number, durationSec = 1.0, velocity = 0.88): void {
   const ctx = getAudioContext();
   const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
   const midi = noteToMidi(note);
@@ -137,16 +148,14 @@ export function playPluckedGuitarNote(note: Note, startTime?: number, durationSe
   // 1. If exact note sample buffer is already cached, play directly at 1.0 pitch
   const cachedBuffer = sampleBufferCache.get(midi);
   if (cachedBuffer) {
-    playSampledVoice(cachedBuffer, 1.0, t, durationSec);
+    playSampledVoice(cachedBuffer, 1.0, t, durationSec, velocity);
     return;
   }
 
-  // 2. Trigger on-demand background decode of the exact note
-  if (soundfontRawData) {
-    decodeNoteOnDemand(midi).catch(() => {});
-  } else if (!isSoundfontFetching) {
-    fetchSoundfontData();
-  }
+  // 2. Reuse an in-flight decode instead of dropping the first note while it loads.
+  const exactDecode = soundfontRawData
+    ? decodeNoteOnDemand(midi)
+    : fetchSoundfontData().then(() => decodeNoteOnDemand(midi));
 
   // 3. Find closest available real acoustic sample buffer and pitch-shift it
   // This guarantees 100% authentic sampled acoustic guitar sound with ZERO synthesized beeps!
@@ -164,21 +173,21 @@ export function playPluckedGuitarNote(note: Note, startTime?: number, durationSe
   if (bestMidi !== null) {
     const nearestBuffer = sampleBufferCache.get(bestMidi)!;
     const playbackRate = Math.pow(2, (midi - bestMidi) / 12);
-    playSampledVoice(nearestBuffer, playbackRate, t, durationSec);
+    playSampledVoice(nearestBuffer, playbackRate, t, durationSec, velocity);
     return;
   }
 
-  // 4. If soundfont is currently decoding its very first note, decode synchronously/immediately
-  if (soundfontRawData) {
-    decodeNoteOnDemand(midi).then((buf) => {
-      if (buf && startTime === undefined && Math.abs(ctx.currentTime - t) < 0.1) {
-        playSampledVoice(buf, 1.0, ctx.currentTime, durationSec);
-      }
-    });
-  }
+  // 4. With no warm sample available, play the exact sample as soon as it is ready.
+  // Scheduled playback gets a tight deadline; direct fret taps allow a slightly longer one.
+  exactDecode.then((buf) => {
+    const latestUsefulTime = startTime === undefined ? t + 0.24 : t + 0.035;
+    if (buf && ctx.currentTime <= latestUsefulTime) {
+      playSampledVoice(buf, 1.0, Math.max(ctx.currentTime, t), durationSec, velocity);
+    }
+  });
 }
 
-function playSampledVoice(buffer: AudioBuffer, playbackRate: number, t: number, durationSec: number): void {
+function playSampledVoice(buffer: AudioBuffer, playbackRate: number, t: number, durationSec: number, velocity: number): void {
   if (!audioCtx) return;
   const ctx = audioCtx;
 
@@ -190,9 +199,11 @@ function playSampledVoice(buffer: AudioBuffer, playbackRate: number, t: number, 
   const safeDuration = Math.max(0.08, durationSec);
 
   // Natural acoustic guitar pluck dynamics
-  gainNode.gain.setValueAtTime(0.9, t);
+  const peakGain = Math.max(0.1, Math.min(1, velocity));
+  gainNode.gain.setValueAtTime(0.0001, t);
+  gainNode.gain.linearRampToValueAtTime(peakGain, t + 0.003);
   const sustainEnd = t + Math.max(0.05, safeDuration * 0.85);
-  gainNode.gain.setValueAtTime(0.9, sustainEnd);
+  gainNode.gain.setValueAtTime(peakGain, sustainEnd);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, sustainEnd + 0.35);
 
   source.connect(gainNode);
@@ -212,8 +223,11 @@ export function playChord(notes: Note[], startTime?: number, durationSec = 1.0):
   const ctx = getAudioContext();
   const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
 
-  notes.forEach((note, idx) => {
-    const strumOffset = idx * 0.008;
-    playPluckedGuitarNote(note, t + strumOffset, durationSec);
+  const orderedNotes = [...notes].sort((a, b) => b.string - a.string);
+  const chordVelocity = Math.max(0.56, 0.88 - Math.max(0, orderedNotes.length - 1) * 0.06);
+
+  orderedNotes.forEach((note, idx) => {
+    const strumOffset = idx * 0.009;
+    playPluckedGuitarNote(note, t + strumOffset, durationSec, chordVelocity);
   });
 }
