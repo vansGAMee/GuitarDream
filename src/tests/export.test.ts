@@ -3,8 +3,9 @@ import { Song, createEmptySong } from '../types/music';
 import { generateAsciiTab } from '../export/asciiTab';
 import { generateMidiFile } from '../export/midiExport';
 import { generateMusicXml } from '../export/musicXmlExport';
+import { audioBufferToWav } from '../export/audioExport';
 
-describe('Exports (ASCII, MIDI, MusicXML)', () => {
+describe('Exports (ASCII, MIDI, MusicXML, Audio WAV)', () => {
   const testSong: Song = {
     ...createEmptySong('Test Riff'),
     bpm: 120,
@@ -77,5 +78,30 @@ describe('Exports (ASCII, MIDI, MusicXML)', () => {
     expect(xml).toContain('<fret>2</fret>');
     expect(xml).toContain('<rest/>');
     expect(xml).toContain('</score-partwise>');
+  });
+
+  it('encodes mock AudioBuffer into valid RIFF WAVE header bytes', () => {
+    const mockChannel = new Float32Array(100);
+    const mockAudioBuffer = {
+      numberOfChannels: 2,
+      sampleRate: 44100,
+      length: 100,
+      getChannelData: () => mockChannel,
+    } as unknown as AudioBuffer;
+
+    const wavBytes = audioBufferToWav(mockAudioBuffer);
+    expect(wavBytes.length).toBe(44 + 100 * 2 * 2);
+
+    // Check RIFF header ('R', 'I', 'F', 'F')
+    expect(wavBytes[0]).toBe(0x52);
+    expect(wavBytes[1]).toBe(0x49);
+    expect(wavBytes[2]).toBe(0x46);
+    expect(wavBytes[3]).toBe(0x46);
+
+    // Check WAVE header ('W', 'A', 'V', 'E')
+    expect(wavBytes[8]).toBe(0x57);
+    expect(wavBytes[9]).toBe(0x41);
+    expect(wavBytes[10]).toBe(0x56);
+    expect(wavBytes[11]).toBe(0x45);
   });
 });
