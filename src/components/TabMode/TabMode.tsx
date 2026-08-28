@@ -1,4 +1,4 @@
-﻿import React, { useRef } from 'react';
+﻿import React, { useRef, useEffect } from 'react';
 import { useSong } from '../../state/songContext';
 import { STRING_NAMES } from '../../types/music';
 import { TabCanvas } from './TabCanvas';
@@ -20,6 +20,17 @@ export const TabMode: React.FC = () => {
   } = useSong();
 
   const fretboardScrollRef = useRef<HTMLDivElement>(null);
+  const scoreContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll score down as new steps/rows are added on mobile and desktop
+  useEffect(() => {
+    if (editingStepIndex === null && scoreContainerRef.current) {
+      scoreContainerRef.current.scrollTo({
+        top: scoreContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [song.steps.length, editingStepIndex]);
 
   const handlePasteFromClipboard = async () => {
     try {
@@ -37,6 +48,7 @@ export const TabMode: React.FC = () => {
     <section id="view-tab" className="relative flex flex-col h-full w-full bg-canvas overflow-hidden">
       {/* Scrollable Score Section */}
       <div
+        ref={scoreContainerRef}
         className="flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar"
         style={{
           WebkitOverflowScrolling: 'touch',

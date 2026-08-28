@@ -1,5 +1,5 @@
 ﻿import { Note } from '../types/music';
-import { noteToMidi, noteToFrequency } from '../music/midiNotes';
+import { noteToMidi } from '../music/midiNotes';
 import { GuitarFxNode } from './fx';
 
 let audioCtx: AudioContext | null = null;
@@ -32,6 +32,9 @@ function base64ToArrayBuffer(base64Uri: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+// Open string MIDI notes for instant acoustic priority decoding
+const CORE_GUITAR_MIDIS = [40, 45, 50, 55, 59, 64, 69, 74];
+
 export function getAudioContext(): AudioContext {
   if (!audioCtx) {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -45,7 +48,7 @@ export function getAudioContext(): AudioContext {
     compressor.release.setValueAtTime(0.15, audioCtx.currentTime);
 
     masterGain = audioCtx.createGain();
-    masterGain.gain.setValueAtTime(0.85, audioCtx.currentTime);
+    masterGain.gain.setValueAtTime(0.9, audioCtx.currentTime);
 
     fxNode = new GuitarFxNode(audioCtx);
 
@@ -53,12 +56,8 @@ export function getAudioContext(): AudioContext {
     compressor.connect(masterGain);
     masterGain.connect(audioCtx.destination);
 
-    // Non-blocking background soundfont prefetch
-    if (typeof requestIdleCallback !== 'undefined') {
-      requestIdleCallback(() => fetchSoundfontData());
-    } else {
-      setTimeout(() => fetchSoundfontData(), 1000);
-    }
+    // Immediately fetch soundfont
+    fetchSoundfontData();
   }
 
   if (audioCtx.state === 'suspended') {
@@ -66,6 +65,13 @@ export function getAudioContext(): AudioContext {
   }
 
   return audioCtx;
+}
+
+// Start fetching soundfont immediately on page load
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    fetchSoundfontData();
+  }, 10);
 }
 
 async function fetchSoundfontData(): Promise<void> {
@@ -76,8 +82,15 @@ async function fetchSoundfontData(): Promise<void> {
     const res = await fetch('/soundfonts/acoustic_guitar_steel.json');
     if (!res.ok) throw new Error('Soundfont fetch failed');
     soundfontRawData = await res.json();
-  } catch {
-    // Fallback stays active
+
+    // Immediately decode core guitar open strings so we have instant sampled audio for any pitch
+    if (audioCtx) {
+      for (const midi of CORE_GUITAR_MIDIS) {
+        decodeNoteOnDemand(midi).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load acoustic guitar soundfont:', err);
   } finally {
     isSoundfontFetching = false;
   }
@@ -121,38 +134,66 @@ export function playPluckedGuitarNote(note: Note, startTime?: number, durationSe
   const t = startTime !== undefined ? Math.max(ctx.currentTime, startTime) : ctx.currentTime;
   const midi = noteToMidi(note);
 
-  // If real sample buffer is already decoded, use sampled sound
+  // 1. If exact note sample buffer is already cached, play directly at 1.0 pitch
   const cachedBuffer = sampleBufferCache.get(midi);
   if (cachedBuffer) {
-    playSampledVoice(cachedBuffer, t, durationSec);
+    playSampledVoice(cachedBuffer, 1.0, t, durationSec);
     return;
   }
 
-  // Trigger on-demand background decode for subsequent plucks
+  // 2. Trigger on-demand background decode of the exact note
   if (soundfontRawData) {
     decodeNoteOnDemand(midi).catch(() => {});
   } else if (!isSoundfontFetching) {
     fetchSoundfontData();
   }
 
-  // Instant zero-lag acoustic physical synthesis voice
-  playPhysicalSynthVoice(note, t, durationSec);
+  // 3. Find closest available real acoustic sample buffer and pitch-shift it
+  // This guarantees 100% authentic sampled acoustic guitar sound with ZERO synthesized beeps!
+  let bestMidi: number | null = null;
+  let minDiff = Infinity;
+
+  sampleBufferCache.forEach((_, cachedMidi) => {
+    const diff = Math.abs(cachedMidi - midi);
+    if (diff < minDiff) {
+      minDiff = diff;
+      bestMidi = cachedMidi;
+    }
+  });
+
+  if (bestMidi !== null) {
+    const nearestBuffer = sampleBufferCache.get(bestMidi)!;
+    const playbackRate = Math.pow(2, (midi - bestMidi) / 12);
+    playSampledVoice(nearestBuffer, playbackRate, t, durationSec);
+    return;
+  }
+
+  // 4. If soundfont is currently decoding its very first note, decode synchronously/immediately
+  if (soundfontRawData) {
+    decodeNoteOnDemand(midi).then((buf) => {
+      if (buf && startTime === undefined && Math.abs(ctx.currentTime - t) < 0.1) {
+        playSampledVoice(buf, 1.0, ctx.currentTime, durationSec);
+      }
+    });
+  }
 }
 
-function playSampledVoice(buffer: AudioBuffer, t: number, durationSec: number): void {
+function playSampledVoice(buffer: AudioBuffer, playbackRate: number, t: number, durationSec: number): void {
   if (!audioCtx) return;
   const ctx = audioCtx;
 
   const source = ctx.createBufferSource();
   source.buffer = buffer;
+  source.playbackRate.setValueAtTime(playbackRate, t);
 
   const gainNode = ctx.createGain();
   const safeDuration = Math.max(0.08, durationSec);
 
-  gainNode.gain.setValueAtTime(0.85, t);
+  // Natural acoustic guitar pluck dynamics
+  gainNode.gain.setValueAtTime(0.9, t);
   const sustainEnd = t + Math.max(0.05, safeDuration * 0.85);
-  gainNode.gain.setValueAtTime(0.85, sustainEnd);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, sustainEnd + 0.3);
+  gainNode.gain.setValueAtTime(0.9, sustainEnd);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, sustainEnd + 0.35);
 
   source.connect(gainNode);
 
@@ -163,68 +204,7 @@ function playSampledVoice(buffer: AudioBuffer, t: number, durationSec: number): 
   }
 
   source.start(t);
-  source.stop(sustainEnd + 0.35);
-}
-
-function playPhysicalSynthVoice(note: Note, t: number, durationSec: number): void {
-  if (!audioCtx) return;
-  const ctx = audioCtx;
-  const freq = noteToFrequency(note);
-
-  const safeDuration = Math.max(0.05, Math.min(durationSec, 3.0));
-  const attackTime = Math.min(0.005, safeDuration * 0.15);
-  const releaseTime = safeDuration;
-
-  const osc1 = ctx.createOscillator();
-  const osc2 = ctx.createOscillator();
-  const sub = ctx.createOscillator();
-
-  osc1.type = 'sawtooth';
-  osc1.frequency.setValueAtTime(freq, t);
-
-  osc2.type = 'triangle';
-  osc2.frequency.setValueAtTime(freq * 1.001, t);
-
-  sub.type = 'sine';
-  sub.frequency.setValueAtTime(freq * 2, t);
-
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.setValueAtTime(Math.min(freq * 6, 7000), t);
-  filter.frequency.exponentialRampToValueAtTime(Math.max(freq * 1.2, 350), t + releaseTime * 0.7);
-
-  const bodyFilter = ctx.createBiquadFilter();
-  bodyFilter.type = 'peaking';
-  bodyFilter.frequency.setValueAtTime(180, t);
-  bodyFilter.Q.setValueAtTime(2, t);
-  bodyFilter.gain.setValueAtTime(2, t);
-
-  const noteGain = ctx.createGain();
-  noteGain.gain.setValueAtTime(0.0001, t);
-  noteGain.gain.linearRampToValueAtTime(0.24, t + attackTime);
-  noteGain.gain.exponentialRampToValueAtTime(0.0001, t + releaseTime);
-
-  osc1.connect(filter);
-  osc2.connect(filter);
-  sub.connect(filter);
-
-  filter.connect(bodyFilter);
-  bodyFilter.connect(noteGain);
-
-  if (fxNode) {
-    noteGain.connect(fxNode.input);
-  } else {
-    noteGain.connect(ctx.destination);
-  }
-
-  osc1.start(t);
-  osc2.start(t);
-  sub.start(t);
-
-  const stopTime = t + releaseTime + 0.05;
-  osc1.stop(stopTime);
-  osc2.stop(stopTime);
-  sub.stop(stopTime);
+  source.stop(sustainEnd + 0.4);
 }
 
 export function playChord(notes: Note[], startTime?: number, durationSec = 1.0): void {
