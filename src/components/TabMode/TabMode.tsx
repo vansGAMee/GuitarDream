@@ -1,12 +1,12 @@
 ﻿import React, { useRef, useEffect } from 'react';
 import { useSong } from '../../state/songContext';
-import { STRING_NAMES } from '../../types/music';
 import { TabCanvas } from './TabCanvas';
 import { RhythmPicker } from './RhythmPicker';
 import { StepContextMenu } from './StepContextMenu';
 import { OnboardingHint } from './OnboardingHint';
 import { Fretboard } from '../Fretboard/Fretboard';
 import { IconArrowForward } from '../Common/Icons';
+import { STRING_NAMES } from '../../types/music';
 
 export const TabMode: React.FC = () => {
   const {
@@ -55,13 +55,10 @@ export const TabMode: React.FC = () => {
           paddingBottom: 'calc(var(--tab-panel-h) + var(--nav-h) + 12px)',
         }}
       >
-        {/* Score Header & Rhythm Picker */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-3 sm:mb-4">
+        {/* Controls Bar: Time/BPM info, Paste & Rhythm Picker */}
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 mb-2.5 sm:mb-3">
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <h2 className="text-sm sm:text-base font-bold text-on-surface truncate max-w-[180px] sm:max-w-xs">
-              {song.title}
-            </h2>
-            <span className="text-[11px] sm:text-xs text-text-tertiary font-mono">
+            <span className="text-[11px] sm:text-xs text-text-tertiary font-mono bg-surface-1 px-2 py-1 rounded-lg border border-soft-divider">
               {song.timeSignature.numerator}/{song.timeSignature.denominator} • {song.bpm} BPM
             </span>
             <button

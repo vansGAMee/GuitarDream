@@ -88,12 +88,8 @@ export const PlayMode: React.FC = () => {
         </div>
       )}
 
-      {/* Top Header & BPM Control */}
-      <div className="flex flex-col items-center pt-2 sm:pt-4 pb-1 sm:pb-2 px-3 sm:px-4 shrink-0 space-y-1.5">
-        <h1 className="text-base sm:text-title-lg font-bold text-on-surface text-center truncate max-w-xs">
-          {song.title}
-        </h1>
-
+      {/* Top Controls: BPM Control & Loop Range Indicator */}
+      <div className="flex flex-col items-center pt-2 sm:pt-3 pb-1 px-3 shrink-0 space-y-1.5">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
           <BpmControl />
           <TapTempoButton
