@@ -25,7 +25,7 @@ export const BpmControl: React.FC = () => {
       </button>
 
       <div className="flex items-baseline gap-1 min-w-[55px] sm:min-w-[65px] justify-center select-none">
-        <span id="bpm-display" className="font-bold text-xl sm:text-2xl font-mono text-on-surface leading-none">
+        <span key={song.bpm} id="bpm-display" className="bpm-value font-bold text-xl sm:text-2xl font-mono text-on-surface leading-none">
           {song.bpm}
         </span>
         <span className="text-[10px] sm:text-metadata-sm text-text-tertiary font-semibold uppercase">BPM</span>

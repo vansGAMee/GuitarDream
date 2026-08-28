@@ -71,7 +71,7 @@ export const PlayMode: React.FC = () => {
   return (
     <section
       id="view-play"
-      className="relative flex flex-col h-full w-full bg-canvas overflow-hidden justify-between"
+      className="animate-mode-in relative flex flex-col h-full w-full bg-canvas overflow-hidden justify-between"
       style={{ paddingBottom: 'var(--nav-h)' }}
     >
       {/* Tap Tempo Full Screen Overlay when active */}
@@ -80,7 +80,7 @@ export const PlayMode: React.FC = () => {
           onClick={handleScreenTap}
           className="absolute inset-0 z-40 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center cursor-pointer select-none animate-fade-in p-4"
         >
-          <div className="p-6 bg-surface-1 border-2 border-primary rounded-3xl text-center shadow-2xl space-y-3 pointer-events-none transform scale-105 transition-all max-w-sm">
+          <div className="tap-card p-6 bg-surface-1 border-2 border-primary rounded-3xl text-center shadow-2xl space-y-3 pointer-events-none transform scale-105 transition-all max-w-sm">
             <div className="text-3xl sm:text-4xl font-bold text-primary font-mono">{song.bpm} BPM</div>
             <p className="text-sm font-semibold text-on-surface">Тапайте в любом месте экрана в ритм</p>
             <p className="text-xs text-text-tertiary">Темп зафиксируется автоматически через пару секунд</p>

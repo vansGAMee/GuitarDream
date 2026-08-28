@@ -33,6 +33,12 @@
   --nav-base-h: 60px;
   --nav-h: calc(var(--nav-base-h) + var(--safe-bottom));
   --tab-panel-h: clamp(190px, 34dvh, 280px);
+
+  --motion-fast: 120ms;
+  --motion-standard: 200ms;
+  --motion-emphasized: 340ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.2, 1.12);
 }
 
 /* Landscape / compact screen adaptation */
@@ -69,6 +75,54 @@ body {
   color: #e3e2e7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:not(:disabled) {
+  transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-out);
+}
+
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible {
+  outline: 2px solid rgba(235, 193, 101, 0.9);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):not(.touch-row):hover {
+    transform: translateY(-1px);
+  }
+
+  button:not(:disabled):not(.touch-row):hover > svg {
+    transform: scale(1.045);
+  }
+}
+
+button:not(:disabled):not(.touch-row):active {
+  transform: translateY(1px) scale(0.975);
+  transition-duration: 70ms;
+}
+
+button > svg {
+  transition: transform var(--motion-standard) var(--ease-out);
+}
+
+button:active > svg {
+  transform: scale(0.94);
 }
 
 @supports (height: 100dvh) {
@@ -146,20 +200,109 @@ body {
   box-shadow: 0 0 10px rgba(201, 162, 74, 0.4);
 }
 
+@keyframes modeEnter {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheetEnterMobile {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheetEnterDesktop {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tapCardEnter {
+  from { opacity: 0; transform: translateY(8px) scale(1.025); }
+  to { opacity: 1; transform: translateY(0) scale(1.05); }
+}
+
+@keyframes noteSettle {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.72); }
+  65% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes valueTick {
+  from { opacity: 0.35; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hintBreathe {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(235, 193, 101, 0); }
+  50% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 5px rgba(235, 193, 101, 0.09); }
+}
+
+.animate-mode-in {
+  animation: modeEnter var(--motion-standard) var(--ease-out);
+}
+
+.animate-fade-in,
+.sheet-backdrop {
+  animation: fadeIn 180ms ease-out;
+}
+
+.sheet-panel {
+  transform-origin: bottom center;
+  animation: sheetEnterMobile var(--motion-emphasized) var(--ease-out);
+  will-change: transform, opacity;
+}
+
+@media (min-width: 640px) {
+  .sheet-panel {
+    transform-origin: center;
+    animation-name: sheetEnterDesktop;
+  }
+}
+
+.tap-card {
+  animation: tapCardEnter 300ms var(--ease-spring);
+}
+
+.bpm-value {
+  display: inline-block;
+  animation: valueTick 150ms var(--ease-out);
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding-hint {
+  animation: hintBreathe 2.2s ease-in-out infinite;
+}
+
+.nav-btn[aria-pressed="true"] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.nav-btn[aria-pressed="true"] > svg {
+  filter: drop-shadow(0 2px 5px rgba(235, 193, 101, 0.22));
+}
+
 /* Hardware button tactile feel */
 .hardware-btn {
   background: #202329;
   border-top: 1px solid #353B45;
   border-bottom: 1px solid #0B0B0D;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-  transition: transform 0.08s ease, background 0.1s ease;
+  transition: transform var(--motion-fast) var(--ease-out), background var(--motion-fast) ease,
+    color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-standard) ease;
+}
+.hardware-btn:hover {
+  box-shadow: 0 6px 12px -3px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 .hardware-btn:active {
   background: #1a1c21;
   border-top: 1px solid #0B0B0D;
   border-bottom: 1px solid #353B45;
   box-shadow: none;
-  transform: translateY(1px) scale(0.97);
+  transform: translateY(1px) scale(0.965);
 }
 
 /* Pulse animation for active playback notes */
@@ -173,6 +316,10 @@ body {
   will-change: transform, box-shadow;
 }
 
+.note-token:not(.playing-note) {
+  animation: noteSettle 230ms var(--ease-spring);
+}
+
 /* Utility to hide scrollbars */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
@@ -180,6 +327,7 @@ body {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  overscroll-behavior: contain;
 }
 
 /* Six-row grid for precise string alignment */
@@ -208,10 +356,11 @@ body {
   height: 100%;
   position: relative;
   z-index: 30;
-  transition: background-color 0.1s ease;
+  transition: background-color 90ms ease, box-shadow 120ms ease;
 }
 .touch-row:active {
   background: rgba(235, 193, 101, 0.15);
+  box-shadow: inset 0 0 18px rgba(235, 193, 101, 0.08);
 }
 
 .playhead {
@@ -234,7 +383,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .playing-note {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

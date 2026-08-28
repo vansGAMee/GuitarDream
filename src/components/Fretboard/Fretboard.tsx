@@ -142,7 +142,7 @@ export const Fretboard: React.FC<FretboardProps> = ({
             return (
               <div
                 key={`${note.string}-${note.fret}`}
-                className={`absolute w-7 h-7 rounded-full bg-primary text-canvas font-bold text-xs flex items-center justify-center shadow-lg -translate-x-1/2 -translate-y-1/2 ${
+                className={`note-token absolute w-7 h-7 rounded-full bg-primary text-canvas font-bold text-xs flex items-center justify-center shadow-lg -translate-x-1/2 -translate-y-1/2 ${
                   pulseActiveNotes ? 'playing-note' : ''
                 }`}
                 style={{

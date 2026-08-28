@@ -14,8 +14,8 @@ export const FxSheet: React.FC<FxSheetProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
-      <div className="w-full sm:max-w-md bg-surface-1 border-t sm:border border-strong-divider rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+    <div className="sheet-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4">
+      <div className="sheet-panel w-full sm:max-w-md bg-surface-1 border-t sm:border border-strong-divider rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-strong-divider shrink-0">
           <div className="flex items-center gap-2">

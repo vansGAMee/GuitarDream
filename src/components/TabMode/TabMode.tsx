@@ -45,7 +45,7 @@ export const TabMode: React.FC = () => {
   };
 
   return (
-    <section id="view-tab" className="relative flex flex-col h-full w-full bg-canvas overflow-hidden">
+    <section id="view-tab" className="animate-mode-in relative flex flex-col h-full w-full bg-canvas overflow-hidden">
       {/* Scrollable Score Section */}
       <div
         ref={scoreContainerRef}
