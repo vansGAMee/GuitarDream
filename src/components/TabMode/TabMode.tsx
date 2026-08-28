@@ -39,7 +39,8 @@ export const TabMode: React.FC = () => {
         className="tab-score-scroll flex-1 overflow-y-auto p-3 sm:p-4 hide-scrollbar"
         style={{
           WebkitOverflowScrolling: 'touch',
-          paddingBottom: 'calc(var(--tab-panel-h) + var(--nav-h) + 12px)',
+          marginBottom: 'calc(var(--tab-panel-h) + var(--nav-h))',
+          paddingBottom: '12px',
         }}
       >
         {/* Controls Bar: Time/BPM info, Paste & Rhythm Picker */}
